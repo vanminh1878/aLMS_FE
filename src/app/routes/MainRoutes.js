@@ -4,6 +4,7 @@ import ProtectedRoute from "../components/ProtectedRoute";
 import LayoutAdmin from "../layouts/adminLayout";
 import SchoolManagement from "../pages/Admin/SchoolManagement/SchoolManagement";
 import ClassManagement from "../pages/Admin/ClassManagement/ClassManagement";
+import StudentManagement from "../pages/Admin/StudentManagement/StudentManagement";
 export default function MainRoutes() {
   return (
     <BrowserRouter>
@@ -16,6 +17,7 @@ export default function MainRoutes() {
           <Route path="/admin" element={<LayoutAdmin />}>
           <Route path="school-management" element={<SchoolManagement />} />
           <Route path="class-management" element={<ClassManagement />} />
+          <Route path="student-management" element={<StudentManagement />} />
           </Route>
         </Route>
 
