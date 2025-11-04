@@ -20,21 +20,21 @@ export default function Navigation() {
     
     // Quản lý cơ sở
     { name: "Quản lý Trường học", path: "/admin/school-management", icon: <FaSchool className="fs-5 icon" /> },
-    { name: "Quản lý Lớp học", path: "/admin/classes", icon: <FaChalkboardTeacher className="fs-5 icon" /> },
+    { name: "Quản lý Lớp học", path: "/admin/class-management", icon: <FaChalkboardTeacher className="fs-5 icon" /> },
     
     // Nội dung học tập
-    { name: "Môn học", path: "/admin/subjects", icon: <FaBookOpen className="fs-5 icon" /> },
-    { name: "Chủ đề & Bài học", path: "/admin/topics-lessons", icon: <FaClipboardList className="fs-5 icon" /> },
-    { name: "Bài tập & Câu hỏi", path: "/admin/exercises", icon: <FaTasks className="fs-5 icon" /> },
+    { name: "Môn học", path: "/admin/subject-management", icon: <FaBookOpen className="fs-5 icon" /> },
+    { name: "Chủ đề & Bài học", path: "/admin/topics-lesson-management", icon: <FaClipboardList className="fs-5 icon" /> },
+    { name: "Bài tập & Câu hỏi", path: "/admin/exercise-management", icon: <FaTasks className="fs-5 icon" /> },
     
     // Quản lý người dùng
-    { name: "Học sinh", path: "/admin/students", icon: <FaUserGraduate className="fs-5 icon" /> },
-    { name: "Giáo viên", path: "/admin/teachers", icon: <FaUserFriends className="fs-5 icon" /> },
-    { name: "Phụ huynh", path: "/admin/parents", icon: <FaUsersCog className="fs-5 icon" /> },
+    { name: "Học sinh", path: "/admin/student-management", icon: <FaUserGraduate className="fs-5 icon" /> },
+    { name: "Giáo viên", path: "/admin/teacher-management", icon: <FaUserFriends className="fs-5 icon" /> },
+    { name: "Phụ huynh", path: "/admin/parent-management", icon: <FaUsersCog className="fs-5 icon" /> },
     
     // Hệ thống
-    { name: "Phân quyền", path: "/admin/roles-permissions", icon: <FaCog className="fs-5 icon" /> },
-    { name: "Hành vi học tập", path: "/admin/behaviours", icon: <FaVideo className="fs-5 icon" /> },
+    { name: "Phân quyền", path: "/admin/roles-permission-management", icon: <FaCog className="fs-5 icon" /> },
+    { name: "Hành vi học tập", path: "/admin/behaviour-management", icon: <FaVideo className="fs-5 icon" /> },
   ];
 
   const { pathname } = useLocation();

@@ -3,7 +3,7 @@ import { BrowserRouter, Route, Routes } from "react-router-dom";
 import ProtectedRoute from "../components/ProtectedRoute";
 import LayoutAdmin from "../layouts/adminLayout";
 import SchoolManagement from "../pages/Admin/SchoolManagement/SchoolManagement";
-
+import ClassManagement from "../pages/Admin/ClassManagement/ClassManagement";
 export default function MainRoutes() {
   return (
     <BrowserRouter>
@@ -15,6 +15,7 @@ export default function MainRoutes() {
         <Route element={<ProtectedRoute />}>
           <Route path="/admin" element={<LayoutAdmin />}>
           <Route path="school-management" element={<SchoolManagement />} />
+          <Route path="class-management" element={<ClassManagement />} />
           </Route>
         </Route>
 
