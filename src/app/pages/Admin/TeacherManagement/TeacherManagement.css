@@ -1,0 +1,90 @@
+/* src/app/pages/Admin/TeacherManagement/TeacherManagement.css */
+
+.teacher-management-container {
+  padding: 24px;
+  background-color: #f9f9fb;
+  min-height: 100vh;
+  position: relative;
+}
+
+.page-title {
+  margin-bottom: 20px !important;
+  font-weight: 600 !important;
+  color: #1a1a1a;
+}
+
+.search-bar {
+  margin-bottom: 24px;
+}
+
+.global-search .MuiOutlinedInput-root {
+  border-radius: 12px;
+  background-color: white;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.departments-container {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.dept-accordion {
+  border-radius: 12px !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  overflow: hidden;
+}
+
+.dept-accordion::before {
+  display: none;
+}
+
+.dept-summary {
+  display: flex;
+  align-items: center;
+  font-weight: 600;
+}
+
+.dept-data-grid {
+  border: none;
+  border-radius: 8px;
+}
+
+.dept-data-grid .MuiDataGrid-columnHeaders {
+  background-color: #f0f7ff;
+  font-weight: 600;
+}
+
+.dept-data-grid .MuiDataGrid-row:hover {
+  background-color: #f8fbff;
+}
+
+.action-buttons {
+  display: flex;
+  gap: 4px;
+}
+
+.add-button-fixed {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  z-index: 1000;
+}
+
+.add-teacher-btn {
+  background-color: #1976d2 !important;
+  text-transform: none !important;
+  font-weight: 600 !important;
+  padding: 10px 20px !important;
+  border-radius: 30px !important;
+  box-shadow: 0 4px 12px rgba(25, 118, 210, 0.3) !important;
+}
+
+.loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 60px 20px;
+  color: #666;
+}
