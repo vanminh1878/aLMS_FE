@@ -21,8 +21,7 @@ import "react-toastify/dist/ReactToastify.css";
 
 import { fetchGet, fetchPut } from "../../../lib/httpHandler.js";
 // import AddSchool from "./AddSchool/AddSchool.js";
-// import DetailSchool from "./DetailSchool/DetailSchool.js";
-// import EditSchool from "./EditSchool/EditSchool.js";
+import DetailSchool from "../../../components/Admin/SchoolManagement/DetailSchool/DetailSchool.jsx";
 import { showYesNoMessageBox } from "../../../components/MessageBox/YesNoMessageBox/showYesNoMessgeBox.js";
 
 import "./SchoolManagement.css";
@@ -169,14 +168,7 @@ export default function SchoolManagement() {
           >
             <VisibilityIcon />
           </IconButton>
-          <IconButton
-            size="small"
-            color="info"
-            title="Chỉnh sửa"
-            onClick={() => openEditModal(params.row)}
-          >
-            <EditIcon />
-          </IconButton>
+        
           <IconButton
             size="small"
             color={params.row.status ? "warning" : "success"}
@@ -242,10 +234,8 @@ export default function SchoolManagement() {
         )}
       </Box>
 
-      {/* === MODALS (BỎ COMMENT KHI CÓ FILE) === */}
       {/* <AddSchool open={openAdd} onClose={() => setOpenAdd(false)} onSuccess={fetchSchools} /> */}
-      {/* {selectedSchool && <DetailSchool open={openDetail} onClose={() => { setOpenDetail(false); setSelectedSchool(null); }} school={selectedSchool} />} */}
-      {/* {selectedSchool && <EditSchool open={openEdit} onClose={() => { setOpenEdit(false); setSelectedSchool(null); }} school={selectedSchool} onSuccess={fetchSchools} />} */}
+      {selectedSchool && <DetailSchool open={openDetail} onClose={() => { setOpenDetail(false); setSelectedSchool(null); }} school={selectedSchool} />}
     </Box>
   );
 }

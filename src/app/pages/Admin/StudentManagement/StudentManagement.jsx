@@ -13,6 +13,7 @@ import {
   FormControl,
   InputLabel,
   Chip,
+  Tooltip,
 } from "@mui/material";
 import { DataGrid } from "@mui/x-data-grid";
 import SearchIcon from "@mui/icons-material/Search";
@@ -36,7 +37,7 @@ export default function StudentManagement() {
   const [filterClass, setFilterClass] = useState("all");
   const [loading, setLoading] = useState(false);
 
-  // === FETCH CLASSES (cho filter) ===
+  // === FETCH CLASSES ===
   const fetchClasses = useCallback(() => {
     fetchGet(
       "/api/classes",
@@ -55,7 +56,7 @@ export default function StudentManagement() {
   const fetchStudents = useCallback(() => {
     setLoading(true);
     fetchGet(
-      "/api/students", // API trả về danh sách học sinh + thông tin lớp, trường
+      "/api/students",
       (data) => {
         const validStudents = (Array.isArray(data) ? data : []).map((item, idx) => ({
           ...item,
@@ -69,6 +70,11 @@ export default function StudentManagement() {
             ? new Date(item.enrollDate).toLocaleDateString("vi-VN")
             : "Chưa có",
           status: item.status ?? true,
+          // ==== THÊM THÔNG TIN PHỤ HUYNH ====
+          parentInfo: item.parent
+            ? `${item.parent.name || ""} ${item.parent.phoneNumber ? `(${item.parent.phoneNumber})` : ""}`.trim() || "Chưa có"
+            : "Chưa có",
+          parentPhone: item.parent?.phoneNumber || "",
         }));
         setStudents(validStudents);
         setLoading(false);
@@ -96,14 +102,16 @@ export default function StudentManagement() {
       result = result.filter((s) => s.classId === filterClass);
     }
 
-    // Tìm kiếm
+    // Tìm kiếm (bao gồm cả phụ huynh)
     if (searchTerm.trim()) {
       const lower = searchTerm.toLowerCase();
       result = result.filter(
         (s) =>
           s.fullName?.toLowerCase().includes(lower) ||
           s.email?.toLowerCase().includes(lower) ||
-          s.phone?.toLowerCase().includes(lower)
+          s.phone?.toLowerCase().includes(lower) ||
+          s.parentInfo?.toLowerCase().includes(lower) ||
+          s.parentPhone?.toLowerCase().includes(lower)
       );
     }
 
@@ -113,7 +121,7 @@ export default function StudentManagement() {
   const handleSearch = (e) => setSearchTerm(e.target.value);
   const handleFilterClass = (e) => setFilterClass(e.target.value);
 
-  // === KHÓA / MỞ KHÓA HỌC SINH ===
+  // === KHÓA / MỞ KHÓA ===
   const handleToggleStatus = async (studentId, currentStatus) => {
     if (!studentId || studentId.startsWith("temp-")) {
       toast.error("Không thể thay đổi trạng thái học sinh tạm thời.");
@@ -148,8 +156,7 @@ export default function StudentManagement() {
       },
       (error) => {
         toast.error(error.title || `Lỗi khi ${action} học sinh`);
-      },
-      () => console.log("PUT status completed")
+      }
     );
   };
 
@@ -169,6 +176,17 @@ export default function StudentManagement() {
     { field: "className", headerName: "Lớp", width: 120 },
     { field: "schoolName", headerName: "Trường", width: 200, flex: 1 },
     { field: "enrollDate", headerName: "Ngày nhập học", width: 140 },
+    // ==== CỘT PHỤ HUYNH MỚI ====
+    {
+      field: "parentInfo",
+      headerName: "Phụ huynh",
+      width: 220,
+      renderCell: (params) => (
+        <Tooltip title={params.value} arrow>
+          <Typography noWrap>{params.value}</Typography>
+        </Tooltip>
+      ),
+    },
     {
       field: "status",
       headerName: "Trạng thái",
@@ -219,7 +237,7 @@ export default function StudentManagement() {
 
       <Box className="toolbar">
         <TextField
-          placeholder="Tìm kiếm theo tên, email, SĐT..."
+          placeholder="Tìm kiếm theo tên, email, SĐT, phụ huynh..."
           value={searchTerm}
           onChange={handleSearch}
           className="search-field"
@@ -269,6 +287,7 @@ export default function StudentManagement() {
             disableRowSelectionOnClick
             localeText={{ noRowsLabel: "Không có học sinh nào" }}
             className="data-grid"
+            autoHeight
           />
         )}
       </Box>
