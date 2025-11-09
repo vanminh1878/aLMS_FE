@@ -1,3 +1,4 @@
+// src/components/Admin/SchoolManagement/DetailSchool/DetailSchool.jsx
 import React, { useState, useEffect, useRef } from "react";
 import {
   Dialog,
@@ -25,7 +26,7 @@ import CheckCircleIcon from "@mui/icons-material/CheckCircle";
 import BlockIcon from "@mui/icons-material/Block";
 
 import { toast } from "react-toastify";
-import { fetchPut } from "../../../../lib/httpHandler.js"; // Điều chỉnh đường dẫn nếu cần
+import { fetchPut } from "../../../../lib/httpHandler.js";
 
 import "./DetailSchool.css";
 
@@ -48,12 +49,16 @@ const DetailSchool = ({ open, onClose, school, onUpdateSuccess }) => {
         address: school.address || "",
       });
     }
+  }, [school]);
+
+  useEffect(() => {
     if (isEditMode && nameRef.current) {
-      nameRef.current.focus();
+      setTimeout(() => nameRef.current?.focus(), 100);
     }
-  }, [school, isEditMode]);
+  }, [isEditMode]);
 
   const handleEdit = () => setIsEditMode(true);
+
   const handleCancel = () => {
     setIsEditMode(false);
     setFormData({
@@ -70,21 +75,31 @@ const DetailSchool = ({ open, onClose, school, onUpdateSuccess }) => {
     }
 
     setLoading(true);
+
     const payload = {
       id: school.id,
-      name: formData.name,
-      email: formData.email,
-      address: formData.address,
+      name: formData.name.trim(),
+      email: formData.email.trim(),
+      address: formData.address.trim(),
+      status: school.status,
     };
 
     fetchPut(
-      "/api/schools", // Thay bằng endpoint thật của bạn
+      "/api/schools",
       payload,
       (res) => {
         if (res.success) {
           toast.success("Cập nhật trường học thành công!");
+
+          const updatedSchool = {
+            ...school,
+            name: formData.name.trim(),
+            email: formData.email.trim(),
+            address: formData.address.trim(),
+          };
+
+          if (onUpdateSuccess) onUpdateSuccess(updatedSchool);
           setIsEditMode(false);
-          if (onUpdateSuccess) onUpdateSuccess({ ...school, ...formData });
         } else {
           toast.error(res.message || "Cập nhật thất bại");
         }
@@ -101,7 +116,11 @@ const DetailSchool = ({ open, onClose, school, onUpdateSuccess }) => {
   return (
     <Dialog
       open={open}
-      onClose={onClose}
+      onClose={(event, reason) => {
+        if (reason !== 'backdropClick' && reason !== 'escapeKeyDown') {
+          onClose();
+        }
+      }} // <<<< NGĂN ĐÓNG KHI CLICK NGOÀI HOẶC ESC
       maxWidth="md"
       fullWidth
       className="detail-school-dialog"
@@ -124,36 +143,34 @@ const DetailSchool = ({ open, onClose, school, onUpdateSuccess }) => {
 
       <DialogContent className="dialog-content">
         <Grid container spacing={4}>
-         {/* Tên trường  */}
-        <Grid item xs={12}>
-        <Box display="flex" alignItems="center" gap={1} mb={1}>
-            <SchoolIcon fontSize="small" color="action" />
-            <Typography variant="subtitle1" color="textSecondary" fontWeight={500}>
-            Tên trường
-            </Typography>
-        </Box>
-        <TextField
-            inputRef={nameRef}
-            fullWidth
-            value={formData.name}
-            onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-            disabled={!isEditMode}
-            variant="outlined"
-            size="medium"
-            placeholder="Nhập tên trường..."
-            InputProps={{ readOnly: !isEditMode }}
-            sx={{
-            "& .MuiOutlinedInput-root": {
-                backgroundColor: isEditMode ? "#fff" : "#f9f9f9",
-                fontSize: "1.05rem",        // Giống Email
-                fontWeight: 500,            // Không đậm nữa
-                borderRadius: "12px",
-                // Chỉ thêm viền focus khi edit (CSS global đã lo phần này)
-            },
-            // Đảm bảo khi hover/focus vẫn mượt (dựa vào CSS chung)
-            }}
-        />
-        </Grid>
+          {/* Tên trường - ĐÃ BỎ ĐẬM, GIỐNG EMAIL */}
+          <Grid item xs={12}>
+            <Box display="flex" alignItems="center" gap={1} mb={1}>
+              <SchoolIcon fontSize="small" color="action" />
+              <Typography variant="subtitle1" color="textSecondary" fontWeight={500}>
+                Tên trường
+              </Typography>
+            </Box>
+            <TextField
+              inputRef={nameRef}
+              fullWidth
+              value={formData.name}
+              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+              disabled={!isEditMode}
+              variant="outlined"
+              size="medium"
+              placeholder="Nhập tên trường..."
+              InputProps={{ readOnly: !isEditMode }}
+              sx={{
+                "& .MuiOutlinedInput-root": {
+                  backgroundColor: isEditMode ? "#fff" : "#f9f9f9",
+                  fontSize: "1.05rem",
+                  fontWeight: 400, // <<< BỎ ĐẬM, GIỐNG EMAIL
+                  borderRadius: "12px",
+                },
+              }}
+            />
+          </Grid>
 
           {/* Email */}
           <Grid item xs={12}>
@@ -207,9 +224,12 @@ const DetailSchool = ({ open, onClose, school, onUpdateSuccess }) => {
                   fontSize: "1.05rem",
                   borderRadius: "12px",
                   alignItems: "flex-start",
+                  pt: 1.8,
+                  width: "calc(100% + 110px)"
                 },
-                "& .MuiOutlinedInput-input": {
-                  padding: "14px 16px",
+                "& .MuiOutlinedInput-inputMultiline": {
+                  padding: "10px 16px",
+                  lineHeight: 1.6,
                 },
               }}
             />

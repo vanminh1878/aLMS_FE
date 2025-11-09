@@ -15,13 +15,12 @@ import LockIcon from "@mui/icons-material/Lock";
 import LockOpenIcon from "@mui/icons-material/LockOpen";
 import AddIcon from "@mui/icons-material/Add";
 import VisibilityIcon from "@mui/icons-material/Visibility";
-import EditIcon from "@mui/icons-material/Edit";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 
 import { fetchGet, fetchPut } from "../../../lib/httpHandler.js";
-// import AddSchool from "./AddSchool/AddSchool.js";
 import DetailSchool from "../../../components/Admin/SchoolManagement/DetailSchool/DetailSchool.jsx";
+import AddSchool from "../../../components/Admin/SchoolManagement/AddSchool/AddSchool.jsx";
 import { showYesNoMessageBox } from "../../../components/MessageBox/YesNoMessageBox/showYesNoMessgeBox.js";
 
 import "./SchoolManagement.css";
@@ -33,9 +32,7 @@ export default function SchoolManagement() {
   const [openAdd, setOpenAdd] = useState(false);
   const [selectedSchool, setSelectedSchool] = useState(null);
   const [openDetail, setOpenDetail] = useState(false);
-  const [openEdit, setOpenEdit] = useState(false);
 
-  // === FETCH SCHOOLS ===
   const fetchSchools = useCallback(() => {
     setLoading(true);
     fetchGet(
@@ -47,7 +44,7 @@ export default function SchoolManagement() {
           name: item.name || "Chưa đặt tên",
           address: item.address || "Chưa có địa chỉ",
           email: item.email || "Chưa có email",
-          status: item.status ?? true,
+          status: item.status ?? true, // nếu backend trả null/undefined → mặc định true
         }));
         setSchools(validSchools);
         setLoading(false);
@@ -61,13 +58,16 @@ export default function SchoolManagement() {
         setLoading(false); // onException
       }
     );
-  }, []);
+  }, []); // <-- Dependency rỗng → hàm không bao giờ thay đổi
 
+  // Chỉ gọi 1 lần khi component mount
   useEffect(() => {
     fetchSchools();
-  }, [fetchSchools]);
+  }, []); // <-- Chỉ chạy 1 lần
 
+  // ===================================================================
   // === TÌM KIẾM ===
+  // ===================================================================
   const filteredSchools = useMemo(() => {
     if (!searchTerm.trim()) return schools;
     const lower = searchTerm.toLowerCase();
@@ -80,7 +80,9 @@ export default function SchoolManagement() {
 
   const handleSearch = (e) => setSearchTerm(e.target.value);
 
+  // ===================================================================
   // === KHÓA / MỞ KHÓA TRƯỜNG ===
+  // ===================================================================
   const handleToggleStatus = async (schoolId, currentStatus) => {
     if (!schoolId || schoolId.startsWith("temp-")) {
       toast.error("Không thể thay đổi trạng thái trường tạm thời.");
@@ -106,7 +108,6 @@ export default function SchoolManagement() {
       "/api/schools",
       payload,
       (res) => {
-        // res là object từ BE: { success: true, ... }
         if (res.success) {
           setSchools((prev) =>
             prev.map((s) =>
@@ -120,29 +121,25 @@ export default function SchoolManagement() {
       },
       (error) => {
         toast.error(error.title || `Lỗi khi ${action} trường`);
-      },
-      () => {
-        console.log("PUT request completed (exception handled)");
       }
     );
   };
 
-  // === MODAL HANDLERS ===
+  // ===================================================================
+  // === MỞ MODAL ===
+  // ===================================================================
   const openDetailModal = (school) => {
     setSelectedSchool(school);
     setOpenDetail(true);
   };
 
-  const openEditModal = (school) => {
-    setSelectedSchool(school);
-    setOpenEdit(true);
-  };
-
-  // === CỘT BẢNG ===
+  // ===================================================================
+  // === CỘT BẢNG DATAGRID ===
+  // ===================================================================
   const columns = [
-    { field: "name", headerName: "Tên trường", width: 220, flex: 1 },
-    { field: "address", headerName: "Địa chỉ", width: 280, flex: 1.2 },
-    { field: "email", headerName: "Email", width: 200, flex: 0.8 },
+    { field: "name", headerName: "Tên trường", flex: 1, minWidth: 220 },
+    { field: "address", headerName: "Địa chỉ", flex: 1.2, minWidth: 280 },
+    { field: "email", headerName: "Email", flex: 0.8, minWidth: 200 },
     {
       field: "status",
       headerName: "Trạng thái",
@@ -168,7 +165,7 @@ export default function SchoolManagement() {
           >
             <VisibilityIcon />
           </IconButton>
-        
+
           <IconButton
             size="small"
             color={params.row.status ? "warning" : "success"}
@@ -182,20 +179,26 @@ export default function SchoolManagement() {
     },
   ];
 
+  // ===================================================================
+  // === RENDER GIAO DIỆN ===
+  // ===================================================================
   return (
     <Box className="school-management-container">
       <ToastContainer position="top-right" autoClose={3000} />
 
-      <Typography variant="h5" className="page-title">
+      <Typography variant="h5" className="page-title" gutterBottom>
         Quản lý Trường học
       </Typography>
 
-      <Box className="toolbar">
+      {/* Toolbar: Tìm kiếm + Thêm mới */}
+      <Box className="toolbar" sx={{ mb: 3, display: "flex", gap: 2 }}>
         <TextField
           placeholder="Tìm kiếm theo tên hoặc email..."
           value={searchTerm}
           onChange={handleSearch}
           className="search-field"
+          size="small"
+          sx={{ width: 380 }}
           InputProps={{
             startAdornment: (
               <InputAdornment position="start">
@@ -214,28 +217,49 @@ export default function SchoolManagement() {
         </Button>
       </Box>
 
+      {/* Bảng dữ liệu */}
       <Box className="table-container">
         {loading ? (
-          <Box className="loading">
+          <Box className="loading" sx={{ textAlign: "center", py: 8 }}>
             <CircularProgress />
-            <Typography>Đang tải danh sách trường học...</Typography>
+            <Typography mt={2}>Đang tải danh sách trường học...</Typography>
           </Box>
         ) : (
           <DataGrid
             rows={filteredSchools}
             columns={columns}
             getRowId={(row) => row.id}
-            pageSizeOptions={[5, 10, 20]}
+            pageSizeOptions={[5, 10, 20, 50]}
             checkboxSelection
             disableRowSelectionOnClick
             localeText={{ noRowsLabel: "Không có trường học nào" }}
             className="data-grid"
+            autoHeight
           />
         )}
       </Box>
 
-      {/* <AddSchool open={openAdd} onClose={() => setOpenAdd(false)} onSuccess={fetchSchools} /> */}
-      {selectedSchool && <DetailSchool open={openDetail} onClose={() => { setOpenDetail(false); setSelectedSchool(null); }} school={selectedSchool} />}
+      {/* Modal chi tiết + chỉnh sửa */}
+      {selectedSchool && (
+        <DetailSchool
+          open={openDetail}
+          onClose={() => {
+            setOpenDetail(false);
+            setSelectedSchool(null);
+          }}
+          school={selectedSchool}
+          onUpdateSuccess={(updatedSchool) => {
+            // Cập nhật ngay lập tức trong bảng
+            setSchools((prev) =>
+              prev.map((s) => (s.id === updatedSchool.id ? updatedSchool : s))
+            );
+            // Cập nhật selectedSchool để modal không bị cũ
+            setSelectedSchool(updatedSchool);
+          }}
+        />
+      )}
+
+      <AddSchool open={openAdd} onClose={() => setOpenAdd(false)} onSuccess={fetchSchools} />
     </Box>
   );
 }
