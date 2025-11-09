@@ -7,74 +7,131 @@
 }
 
 .page-title {
-  margin-bottom: 24px !important;
-  font-weight: 600 !important;
+  margin-bottom: 16px !important;
+  font-weight: 700 !important;
   color: #1a1a1a;
+  letter-spacing: -0.5px;
 }
 
 .toolbar {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 20px;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin-bottom: 32px;
+}
+
+.left-filters {
+  display: flex;
   gap: 16px;
   flex-wrap: wrap;
+  align-items: center;
 }
 
 .search-field {
-  width: 320px;
+  width: 340px;
   background-color: white;
 }
 
 .search-field .MuiOutlinedInput-root {
-  border-radius: 8px;
+  border-radius: 12px;
+  font-size: 15px;
 }
 
-.filter-grade {
+.filter-grade,
+.filter-year {
   min-width: 180px;
   background-color: white;
 }
 
-.filter-grade .MuiOutlinedInput-root {
-  border-radius: 8px;
-}
-
-.add-button {
-  background-color: #1976d2 !important;
-  text-transform: none !important;
-  font-weight: 500 !important;
-  padding: 8px 16px !important;
-}
-
-.table-container {
-  background-color: white;
+.filter-grade .MuiOutlinedInput-root,
+.filter-year .MuiOutlinedInput-root {
   border-radius: 12px;
+}
+
+/* CARD SIÊU ĐẸP - NHỎ GỌN - KHÔNG BỊ TRÀN KHI HOVER */
+.class-card {
+  height: 220px;
+  border-radius: 20px !important;
   overflow: hidden;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
-  height: 680px;
-}
-
-.data-grid .MuiDataGrid-columnHeaders {
-  background-color: #f5f7fa;
-  font-weight: 600;
-  color: #333;
-}
-
-.data-grid .MuiDataGrid-row:hover {
-  background-color: #f8f9ff;
-}
-
-.action-buttons {
-  display: flex;
-  gap: 4px;
-}
-
-.loading {
+  transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  background: linear-gradient(135deg, #ffffff 0%, #f5f8ff 100%);
+  border: 1px solid #e8ecf4;
   display: flex;
   flex-direction: column;
+}
+
+.class-card:hover {
+  /* CHỈ BAY LÊN + SHADOW ĐẬM - KHÔNG SCALE NỮA */
+  transform: translateY(-12px) !important;
+  box-shadow: 0 24px 48px rgba(25, 118, 210, 0.22) !important;
+  border-color: #1976d2 !important;
+  z-index: 10;
+}
+
+.class-card.active {
+  border-left: 6px solid #4caf50;
+}
+
+.class-card.locked {
+  opacity: 0.78;
+  filter: grayscale(20%);
+}
+
+.card-content {
+  text-align: center;
+  padding: 20px 16px 12px !important;
+  flex-grow: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.class-header {
+  margin-bottom: 12px;
+}
+
+.class-header svg {
+  font-size: 42px !important;
+}
+
+.class-card h5 {
+  font-size: 1.35rem !important;
+  margin: 8px 0 !important;
+}
+
+.student-count {
+  margin-top: 16px;
+  display: flex;
   align-items: center;
   justify-content: center;
-  height: 300px;
-  gap: 16px;
-  color: #666;
+  gap: 8px;
+  background: rgba(25, 118, 210, 0.12);
+  padding: 8px 14px;
+  border-radius: 25px;
+  color: #1976d2;
+  font-size: 1.1rem;
+}
+
+.card-actions {
+  padding: 10px 16px !important;
+  background: #f0f4ff;
+  border-top: 1px solid #e8ecf4;
+  justify-content: space-between !important;
+}
+
+/* Grid spacing rộng hơn cho thoáng */
+.MuiGrid-container {
+  margin-top: 16px !important;
+}
+
+/* Skeleton mượt */
+.skeleton {
+  animation: pulse 1.8s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 0.6; }
+  50% { opacity: 1; }
 }

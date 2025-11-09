@@ -5,296 +5,283 @@ import {
   Typography,
   TextField,
   InputAdornment,
-  IconButton,
   Button,
   CircularProgress,
-  Accordion,
-  AccordionSummary,
-  AccordionDetails,
+  MenuItem,
+  Select,
+  FormControl,
+  InputLabel,
+  Grid,
+  Card,
+  CardContent,
+  CardActions,
+  IconButton,
   Chip,
+  Skeleton,
+  Fade,
+  Zoom,
   Avatar,
   Stack,
 } from "@mui/material";
-import AddIcon from "@mui/icons-material/Add";
-import { DataGrid } from "@mui/x-data-grid";
 import SearchIcon from "@mui/icons-material/Search";
-import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
-import PersonIcon from "@mui/icons-material/Person";
-import BlockIcon from "@mui/icons-material/Block";
-import CheckCircleIcon from "@mui/icons-material/CheckCircle";
-import EditIcon from "@mui/icons-material/Edit";
-import VisibilityIcon from "@mui/icons-material/Visibility";
+import ArrowBackIcon from "@mui/icons-material/ArrowBack";
+import SchoolIcon from "@mui/icons-material/School";
+import PeopleIcon from "@mui/icons-material/People";
+import LockIcon from "@mui/icons-material/Lock";
+import LockOpenIcon from "@mui/icons-material/LockOpen";
+import AddIcon from "@mui/icons-material/Add";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
-
 import { fetchGet, fetchPut } from "../../../lib/httpHandler.js";
+import TeacherTable from "./TeacherTable.jsx"; 
 import { showYesNoMessageBox } from "../../../components/MessageBox/YesNoMessageBox/showYesNoMessgeBox.js";
-
 import "./TeacherManagement.css";
 
 export default function TeacherManagement() {
-  const [departments, setDepartments] = useState([]);
   const [allTeachers, setAllTeachers] = useState([]);
+  const [departments, setDepartments] = useState([]);
   const [searchTerm, setSearchTerm] = useState("");
-  const [expandedDept, setExpandedDept] = useState(false); // false = tất cả thu gọn
-  const [loading, setLoading] = useState(false);
+  const [selectedSpecialization, setSelectedSpecialization] = useState("all");
+  const [loading, setLoading] = useState(true);
+  const [selectedDept, setSelectedDept] = useState(null); // bộ môn đang xem
 
-  // === FETCH DEPARTMENTS + TEACHERS ===
+  // ===================================================================
+  // === FETCH DATA ===
+  // ===================================================================
   const fetchData = useCallback(() => {
     setLoading(true);
+    fetchGet("/api/teachers", (data) => {
+      const validTeachers = (Array.isArray(data) ? data : []).map((t, idx) => ({
+        ...t,
+        id: t.id || t.userId || `temp-${Date.now()}-${idx}`,
+        fullName: t.name || "Chưa đặt tên",
+        email: t.email || "Chưa có email",
+        phone: t.phoneNumber || "Chưa có SĐT",
+        departmentName: t.department?.departmentName || "Chưa có bộ môn",
+        departmentId: t.department?.id || null,
+        specialization: t.specialization || "Khác",
+        status: t.status ?? true,
+      }));
 
-    // Lấy giáo viên (có departmentId, departmentName)
-    fetchGet(
-      "/api/teachers",
-      (teachers) => {
-        const validTeachers = (Array.isArray(teachers) ? teachers : []).map((t, idx) => ({
-          ...t,
-          id: t.id || t.userId || `temp-${Date.now()}-${idx}`,
-          fullName: t.name || "Chưa đặt tên",
-          email: t.email || "Chưa có email",
-          phone: t.phoneNumber || "Chưa có SĐT",
-          departmentName: t.department?.departmentName || "Chưa có bộ môn",
-          departmentId: t.department?.id || null,
-          schoolName: t.school?.name || "Chưa có trường",
-          hireDate: t.hireDate ? new Date(t.hireDate).toLocaleDateString("vi-VN") : "Chưa có",
-          specialization: t.specialization || "Chưa xác định",
-          status: t.status ?? true,
-        }));
-        setAllTeachers(validTeachers);
+      setAllTeachers(validTeachers);
 
-        // Tạo danh sách phòng ban từ giáo viên
-        const deptMap = {};
-        validTeachers.forEach((t) => {
-          if (t.departmentId && t.departmentName) {
+      // Tạo danh sách bộ môn
+      const deptMap = {};
+      validTeachers.forEach((t) => {
+        if (t.departmentId) {
+          if (!deptMap[t.departmentId]) {
             deptMap[t.departmentId] = {
               id: t.departmentId,
               name: t.departmentName,
-              teacherCount: (deptMap[t.departmentId]?.teacherCount || 0) + 1,
+              teacherCount: 0,
+              specializations: new Set(),
             };
           }
-        });
-        const deptList = Object.values(deptMap);
-        setDepartments(deptList);
+          deptMap[t.departmentId].teacherCount++;
+          deptMap[t.departmentId].specializations.add(t.specialization);
+        }
+      });
 
-        setLoading(false);
-      },
-      (error) => {
-        toast.error(error.title || "Lỗi tải dữ liệu giáo viên");
-        setAllTeachers([]);
-        setDepartments([]);
-        setLoading(false);
-      },
-      () => setLoading(false)
-    );
+      const deptList = Object.values(deptMap).map((d) => ({
+        ...d,
+        specializations: Array.from(d.specializations),
+      }));
+      setDepartments(deptList);
+      setLoading(false);
+    }, (err) => {
+      toast.error("Lỗi tải dữ liệu giáo viên");
+      setLoading(false);
+    });
   }, []);
 
   useEffect(() => {
     fetchData();
   }, [fetchData]);
 
-  // === TÌM KIẾM TOÀN CỤC ===
-  const filteredTeachers = useMemo(() => {
-    if (!searchTerm.trim()) return allTeachers;
-    const lower = searchTerm.toLowerCase();
-    return allTeachers.filter(
-      (t) =>
-        t.fullName?.toLowerCase().includes(lower) ||
-        t.email?.toLowerCase().includes(lower) ||
-        t.phone?.toLowerCase().includes(lower) ||
-        t.specialization?.toLowerCase().includes(lower)
-    );
-  }, [allTeachers, searchTerm]);
+  // ===================================================================
+  // === FILTER OPTIONS ===
+  // ===================================================================
+  const specializationOptions = useMemo(() => {
+    const specs = [...new Set(allTeachers.map((t) => t.specialization))];
+    return ["all", ...specs.sort()];
+  }, [allTeachers]);
 
-  const handleSearch = (e) => setSearchTerm(e.target.value);
+  // ===================================================================
+  // === LỌC BỘ MÔN ===
+  // ===================================================================
+  const filteredDepts = useMemo(() => {
+    let result = departments;
 
-  // === MỞ / ĐÓNG PHÒNG BAN ===
-  const handleAccordionChange = (deptId) => (event, isExpanded) => {
-    setExpandedDept(isExpanded ? deptId : false);
-  };
-
-  // === KHÓA / MỞ KHÓA GIÁO VIÊN ===
-  const handleToggleStatus = async (teacherId, currentStatus) => {
-    if (!teacherId || teacherId.startsWith("temp-")) {
-      toast.error("Không thể thay đổi trạng thái tạm thời.");
-      return;
+    if (searchTerm.trim()) {
+      const lower = searchTerm.toLowerCase();
+      result = result.filter((d) =>
+        d.name.toLowerCase().includes(lower) ||
+        d.specializations.some((s) => s.toLowerCase().includes(lower))
+      );
     }
 
-    const action = currentStatus ? "khóa" : "mở khóa";
-    const confirm = await showYesNoMessageBox(
-      `Bạn có chắc muốn ${action} giáo viên này không?`
-    );
-    if (!confirm) return;
+    if (selectedSpecialization !== "all") {
+      result = result.filter((d) =>
+        d.specializations.includes(selectedSpecialization)
+      );
+    }
 
-    const payload = { userId: teacherId, status: !currentStatus };
+    return result;
+  }, [departments, searchTerm, selectedSpecialization]);
 
-    fetchPut(
-      "/api/teachers/status",
-      payload,
-      (res) => {
-        if (res.success) {
-          setAllTeachers((prev) =>
-            prev.map((t) => (t.id === teacherId ? { ...t, status: !currentStatus } : t))
-          );
-          toast.success(`Giáo viên đã được ${action} thành công!`);
-        } else {
-          toast.error(res.message || "Cập nhật thất bại");
-        }
-      },
-      (err) => toast.error(err.title || `Lỗi khi ${action} giáo viên`),
-      () => console.log("PUT completed")
+  // ===================================================================
+  // === RENDER GRID BỘ MÔN ===
+  // ===================================================================
+  const renderDeptGrid = () => {
+    if (loading) {
+      return (
+        <Grid container spacing={4}>
+          {[1, 2, 3, 4].map((i) => (
+            <Grid item xs={12} sm={6} md={4} key={i}>
+              <Card className="dept-card skeleton">
+                <CardContent>
+                  <Skeleton variant="text" width="80%" height={50} />
+                  <Skeleton variant="text" width="60%" />
+                  <Skeleton variant="rectangular" height={80} sx={{ mt: 3, borderRadius: 3 }} />
+                </CardContent>
+              </Card>
+            </Grid>
+          ))}
+        </Grid>
+      );
+    }
+
+    if (filteredDepts.length === 0) {
+  return (
+    <Box textAlign="center" py={12}>
+      <Typography variant="h6" color="text.secondary" fontWeight={500}>
+        {departments.length === 0 
+          ? "Chưa có bộ môn nào" 
+          : "Không tìm thấy bộ môn nào phù hợp"}
+      </Typography>
+    </Box>
+  );
+}
+
+    return (
+      <Grid container spacing={4}>
+        {filteredDepts.map((dept, index) => (
+          <Grid item xs={12} sm={6} md={4} key={dept.id}>
+            <Zoom in style={{ transitionDelay: `${index * 70}ms` }}>
+              <Card
+                className="dept-card"
+                onClick={() => setSelectedDept(dept)}
+                raised
+              >
+                <CardContent className="dept-content">
+                  <Box className="dept-header">
+                    <SchoolIcon sx={{ fontSize: 50, color: "#6a1b9a" }} />
+                  </Box>
+                  <Typography variant="h5" fontWeight={700} gutterBottom>
+                    {dept.name}
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary" gutterBottom>
+                    {dept.specializations.join(" • ")}
+                  </Typography>
+                  <Box className="teacher-count">
+                    <PeopleIcon sx={{ fontSize: 20 }} />
+                    <Typography variant="h6" fontWeight={600}>
+                      {dept.teacherCount} giáo viên
+                    </Typography>
+                  </Box>
+                </CardContent>
+                <CardActions className="dept-actions">
+                  <Chip label="Xem chi tiết" size="small" color="secondary" />
+                </CardActions>
+              </Card>
+            </Zoom>
+          </Grid>
+        ))}
+      </Grid>
     );
   };
 
-  // === CỘT BẢNG TRONG ACCORDION ===
-  const columns = [
-    {
-      field: "fullName",
-      headerName: "Họ tên",
-      width: 180,
-      flex: 1,
-      renderCell: (params) => (
-        <Stack direction="row" spacing={1} alignItems="center">
-          <Avatar sx={{ width: 32, height: 32, bgcolor: "#1976d2" }}>
-            <PersonIcon fontSize="small" />
-          </Avatar>
-          <Typography fontWeight={500}>{params.value}</Typography>
-        </Stack>
-      ),
-    },
-    { field: "email", headerName: "Email", width: 200, flex: 1 },
-    { field: "phone", headerName: "SĐT", width: 130 },
-    { field: "specialization", headerName: "Chuyên môn", width: 150 },
-    { field: "hireDate", headerName: "Ngày nhận việc", width: 140 },
-    {
-      field: "status",
-      headerName: "Trạng thái",
-      width: 110,
-      renderCell: (params) => (
-        <Chip
-          icon={params.value ? <CheckCircleIcon /> : <BlockIcon />}
-          label={params.value ? "Hoạt động" : "Bị khóa"}
-          color={params.value ? "success" : "error"}
-          size="small"
-          variant="outlined"
-        />
-      ),
-    },
-    {
-      field: "actions",
-      headerName: "Thao tác",
-      width: 120,
-      sortable: false,
-      renderCell: (params) => (
-        <Box className="action-buttons">
-          <IconButton size="small" color="primary" title="Xem chi tiết">
-            <VisibilityIcon />
-          </IconButton>
-          <IconButton size="small" color="info" title="Chỉnh sửa">
-            <EditIcon />
-          </IconButton>
-          <IconButton
-            size="small"
-            color={params.row.status ? "warning" : "success"}
-            title={params.row.status ? "Khóa" : "Mở khóa"}
-            onClick={() => handleToggleStatus(params.row.id, params.row.status)}
-          >
-            {params.row.status ? <BlockIcon /> : <CheckCircleIcon />}
-          </IconButton>
-        </Box>
-      ),
-    },
-  ];
-
+  // ===================================================================
+  // === RENDER CHÍNH ===
+  // ===================================================================
   return (
     <Box className="teacher-management-container">
       <ToastContainer position="top-right" autoClose={3000} />
 
-      <Typography variant="h5" className="page-title">
+      <Typography variant="h5" className="page-title" fontWeight={700} gutterBottom>
         Quản lý Giáo viên
       </Typography>
 
-      {/* TÌM KIẾM TOÀN CỤC */}
-      <Box className="search-bar">
-        <TextField
-          fullWidth
-          placeholder="Tìm kiếm giáo viên theo tên, email, SĐT, chuyên môn..."
-          value={searchTerm}
-          onChange={handleSearch}
-          InputProps={{
-            startAdornment: (
-              <InputAdornment position="start">
-                <SearchIcon />
-              </InputAdornment>
-            ),
-          }}
-          className="global-search"
-        />
-      </Box>
-
-      {/* DANH SÁCH PHÒNG BAN */}
-      <Box className="departments-container">
-        {loading ? (
-          <Box className="loading">
-            <CircularProgress />
-            <Typography>Đang tải danh sách giáo viên...</Typography>
+      {selectedDept ? (
+        <Fade in>
+          <Box>
+            <Button
+              variant="contained"
+              color="secondary"
+              size="large"
+              startIcon={<ArrowBackIcon />}
+              onClick={() => setSelectedDept(null)}
+              sx={{ mb: 3, borderRadius: 3, px: 4, py: 1.5, fontWeight: 600 }}
+            >
+              Quay lại danh sách bộ môn
+            </Button>
+            <TeacherTable
+              department={selectedDept}
+              allTeachers={allTeachers}
+              onUpdateTeacher={(updated) => {
+                setAllTeachers((prev) =>
+                  prev.map((t) => (t.id === updated.id ? updated : t))
+                );
+              }}
+            />
           </Box>
-        ) : departments.length === 0 ? (
-          <Typography color="text.secondary" textAlign="center" mt={4}>
-            Chưa có phòng ban nào
-          </Typography>
-        ) : (
-          departments.map((dept) => {
-            const deptTeachers = filteredTeachers.filter((t) => t.departmentId === dept.id);
+        </Fade>
+      ) : (
+        <Fade in>
+          <Box>
+            <Box className="toolbar">
+              <Box className="left-filters">
+                <TextField
+                  placeholder="Tìm kiếm bộ môn hoặc chuyên môn..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  size="small"
+                  className="search-field"
+                  InputProps={{
+                    startAdornment: <InputAdornment position="start"><SearchIcon /></InputAdornment>,
+                  }}
+                />
 
-            return (
-              <Accordion
-                key={dept.id}
-                expanded={expandedDept === dept.id}
-                onChange={handleAccordionChange(dept.id)}
-                className="dept-accordion"
-              >
-                <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-                  <Box className="dept-summary">
-                    <Typography fontWeight={600}>{dept.name}</Typography>
-                    <Chip
-                      label={`${deptTeachers.length} giáo viên`}
-                      size="small"
-                      color="primary"
-                      variant="outlined"
-                      sx={{ ml: 2 }}
-                    />
-                  </Box>
-                </AccordionSummary>
-                <AccordionDetails>
-                  {deptTeachers.length === 0 ? (
-                    <Typography color="text.secondary" fontStyle="italic">
-                      Không có giáo viên nào phù hợp với tìm kiếm
-                    </Typography>
-                  ) : (
-                    <DataGrid
-                      rows={deptTeachers}
-                      columns={columns}
-                      getRowId={(row) => row.id}
-                      pageSizeOptions={[5, 10]}
-                      disableRowSelectionOnClick
-                      autoHeight
-                      className="dept-data-grid"
-                      localeText={{ noRowsLabel: "Không có giáo viên" }}
-                    />
-                  )}
-                </AccordionDetails>
-              </Accordion>
-            );
-          })
-        )}
-      </Box>
+                <FormControl size="small" className="filter-spec">
+                  <InputLabel>Chuyên môn</InputLabel>
+                  <Select
+                    value={selectedSpecialization}
+                    label="Chuyên môn"
+                    onChange={(e) => setSelectedSpecialization(e.target.value)}
+                  >
+                    <MenuItem value="all">Tất cả</MenuItem>
+                    {specializationOptions
+                      .filter((s) => s !== "all")
+                      .map((s) => (
+                        <MenuItem key={s} value={s}>{s}</MenuItem>
+                      ))}
+                  </Select>
+                </FormControl>
+              </Box>
+            </Box>
 
-      {/* NÚT THÊM MỚI */}
+            <Box mt={5}>{renderDeptGrid()}</Box>
+          </Box>
+        </Fade>
+      )}
+
+      {/* NÚT THÊM GIÁO VIÊN */}
       <Box className="add-button-fixed">
         <Button
           variant="contained"
           startIcon={<AddIcon />}
           className="add-teacher-btn"
+          size="large"
         >
           Thêm giáo viên
         </Button>

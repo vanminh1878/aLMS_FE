@@ -28,7 +28,6 @@ export default function Navigation() {
     { name: "Bài tập & Câu hỏi", path: "/admin/exercise-management", icon: <FaTasks className="fs-5 icon" /> },
     
     // Quản lý người dùng
-    { name: "Học sinh", path: "/admin/student-management", icon: <FaUserGraduate className="fs-5 icon" /> },
     { name: "Giáo viên", path: "/admin/teacher-management", icon: <FaUserFriends className="fs-5 icon" /> },
     
     // Hệ thống

@@ -1,90 +1,167 @@
 /* src/app/pages/Admin/TeacherManagement/TeacherManagement.css */
 
 .teacher-management-container {
-  padding: 24px;
-  background-color: #f9f9fb;
+  padding: 28px;
+  background-color: #f9f9fb; /* GIỮ NGUYÊN */
   min-height: 100vh;
   position: relative;
 }
 
 .page-title {
-  margin-bottom: 20px !important;
-  font-weight: 600 !important;
+  margin-bottom: 24px !important;
+  font-weight: 700 !important;
   color: #1a1a1a;
+  font-size: 2rem !important;
+  letter-spacing: -0.5px;
 }
 
-.search-bar {
-  margin-bottom: 24px;
+.toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 20px;
+  margin-bottom: 32px;
 }
 
-.global-search .MuiOutlinedInput-root {
-  border-radius: 12px;
+.left-filters {
+  display: flex;
+  gap: 20px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.search-field {
+  width: 380px;
   background-color: white;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 }
 
-.departments-container {
+.search-field .MuiOutlinedInput-root {
+  border-radius: 16px;
+  font-size: 15px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+  transition: all 0.3s;
+}
+
+.search-field .MuiOutlinedInput-root:hover {
+  box-shadow: 0 6px 16px rgba(0,0,0,0.1);
+}
+
+.filter-spec {
+  min-width: 220px;
+  background-color: white;
+}
+
+.filter-spec .MuiOutlinedInput-root {
+  border-radius: 16px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+}
+
+/* CARD BỘ MÔN - HIỆN ĐẠI NHẤT 2025 */
+.dept-card {
+  height: 240px;
+  border-radius: 24px !important;
+  overflow: hidden;
+  transition: all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1) !important;
+  background: linear-gradient(135deg, #ffffff 0%, #f5f0ff 100%);
+  border: 1px solid #e8e0f5;
+  cursor: pointer;
+  box-shadow: 0 8px 25px rgba(0,0,0,0.08);
+}
+
+.dept-card:hover {
+  /* CHỈ BAY LÊN + SHADOW ĐẬM - KHÔNG SCALE */
+  transform: translateY(-16px) !important;
+  box-shadow: 0 32px 64px rgba(102, 51, 153, 0.22) !important;
+  border-color: #9333ea !important;
+  z-index: 10;
+}
+
+.dept-content {
+  text-align: center;
+  padding: 28px 20px 16px !important;
+  flex-grow: 1;
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  justify-content: center;
 }
 
-.dept-accordion {
-  border-radius: 12px !important;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-  overflow: hidden;
+.dept-header {
+  margin-bottom: 16px;
 }
 
-.dept-accordion::before {
-  display: none;
+.dept-header svg {
+  font-size: 56px !important;
+  filter: drop-shadow(0 4px 12px rgba(102, 51, 153, 0.3));
+  color: #9333ea;
 }
 
-.dept-summary {
+.dept-card .MuiTypography-h5 {
+  font-size: 1.45rem !important;
+  margin: 12px 0 !important;
+  color: #4a148c;
+}
+
+.dept-card .MuiTypography-body2 {
+  font-size: 0.95rem !important;
+  opacity: 0.9;
+}
+
+.teacher-count {
+  margin-top: 20px;
   display: flex;
   align-items: center;
+  justify-content: center;
+  gap: 10px;
+  background: rgba(147, 51, 234, 0.14);
+  padding: 12px 20px;
+  border-radius: 30px;
+  color: #7c3aed;
   font-weight: 600;
 }
 
-.dept-data-grid {
-  border: none;
-  border-radius: 8px;
+.dept-actions {
+  padding: 14px 20px !important;
+  background: linear-gradient(135deg, #f3e8ff 0%, #e0e7ff 100%);
+  border-top: 1px solid #e8e0f5;
+  justify-content: center !important;
 }
 
-.dept-data-grid .MuiDataGrid-columnHeaders {
-  background-color: #f0f7ff;
+.dept-actions .MuiChip-root {
+  background: white;
   font-weight: 600;
+  color: #6b21a8;
 }
 
-.dept-data-grid .MuiDataGrid-row:hover {
-  background-color: #f8fbff;
-}
-
-.action-buttons {
-  display: flex;
-  gap: 4px;
-}
-
+/* NÚT BACK + ADD */
 .add-button-fixed {
   position: fixed;
-  bottom: 24px;
-  right: 24px;
+  bottom: 32px;
+  right: 32px;
   z-index: 1000;
 }
 
 .add-teacher-btn {
-  background-color: #1976d2 !important;
+  background: linear-gradient(45deg, #7c3aed, #a855f7) !important;
+  border-radius: 50px !important;
+  padding: 16px 36px !important;
+  font-weight: 700 !important;
+  font-size: 1.1rem !important;
+  box-shadow: 0 10px 30px rgba(124, 58, 237, 0.4) !important;
   text-transform: none !important;
-  font-weight: 600 !important;
-  padding: 10px 20px !important;
-  border-radius: 30px !important;
-  box-shadow: 0 4px 12px rgba(25, 118, 210, 0.3) !important;
 }
 
-.loading {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: 60px 20px;
-  color: #666;
+.add-teacher-btn:hover {
+  transform: translateY(-4px) scale(1.05) !important;
+  box-shadow: 0 16px 40px rgba(124, 58, 237, 0.5) !important;
+}
+
+/* Skeleton */
+.skeleton {
+  animation: pulse 1.8s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 0.6; }
+  50% { opacity: 1; }
 }
