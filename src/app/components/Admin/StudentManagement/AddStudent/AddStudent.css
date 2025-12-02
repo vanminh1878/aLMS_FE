@@ -1,0 +1,48 @@
+/* src/components/Admin/StudentManagement/AddStudent/AddStudent.css */
+
+.add-student-dialog .dialog-title {
+  padding: 24px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  text-align: center;
+}
+
+.add-student-dialog .dialog-title .MuiTypography-root,
+.add-student-dialog .dialog-title .MuiSvgIcon-root {
+  color: white !important;
+}
+
+.add-student-dialog .dialog-content {
+  padding: 32px 40px !important;
+  max-height: 70vh;
+  overflow-y: auto;
+}
+
+.add-student-dialog .MuiDialogActions-root {
+  background-color: #f8f9fa;
+  border-top: 1px solid #e0e0e0;
+}
+
+.add-student-dialog .MuiPaper-root {
+  border-radius: 20px;
+  overflow: hidden;
+  box-shadow: 0 15px 50px rgba(0, 0, 0, 0.2);
+}
+
+.add-student-dialog .MuiOutlinedInput-root {
+  border-radius: 12px !important;
+  background-color: #fff;
+}
+
+.add-student-dialog .MuiOutlinedInput-root.Mui-focused .MuiOutlinedInput-notchedOutline {
+  border-color: #1976d2 !important;
+  border-width: 2px !important;
+}
+
+.add-student-dialog .MuiOutlinedInput-root:hover .MuiOutlinedInput-notchedOutline {
+  border-color: #1565c0;
+}
+
+.add-student-dialog .MuiSelect-select {
+  padding: 12px 14px;
+}

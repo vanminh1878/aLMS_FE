@@ -13,28 +13,73 @@ import {
   IconButton,
   TextField,
   CircularProgress,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
 } from "@mui/material";
 import CloseIcon from "@mui/icons-material/Close";
 import SaveIcon from "@mui/icons-material/Save";
 import CancelIcon from "@mui/icons-material/Cancel";
 import SchoolIcon from "@mui/icons-material/School";
-import LocationOnIcon from "@mui/icons-material/LocationOn";
-import EmailIcon from "@mui/icons-material/Email";
+import PersonIcon from "@mui/icons-material/Person";
 
 import { toast } from "react-toastify";
-import { fetchPost } from "../../../../lib/httpHandler.js";
-
-import "./AddSchool.css";
+import { fetchPost, fetchGet } from "../../../../lib/httpHandler.js";
 
 const AddSchool = ({ open, onClose, onSuccess }) => {
   const [loading, setLoading] = useState(false);
-  const [formData, setFormData] = useState({
+  const [roles, setRoles] = useState([]);
+
+  const [schoolData, setSchoolData] = useState({
     name: "",
     email: "",
     address: "",
   });
 
+  const [managerData, setManagerData] = useState({
+    Name: "",
+    DateOfBirth: "",
+    Gender: "",
+    PhoneNumber: "",
+    Email: "",
+    Address: "",
+    Username: "",
+    Password: "",
+    RoleId: "",
+  });
+
   const nameRef = useRef(null);
+
+  useEffect(() => {
+    if (open) {
+      setSchoolData({ name: "", email: "", address: "" });
+      setManagerData({
+        Name: "",
+        DateOfBirth: "",
+        Gender: "",
+        PhoneNumber: "",
+        Email: "",
+        Address: "",
+        Username: "",
+        Password: "",
+        RoleId: "",
+      });
+
+      fetchGet("/api/roles", (data) => {
+        const roleList = Array.isArray(data) ? data : [];
+        setRoles(roleList);
+        const managerRole = roleList.find(
+          (r) =>
+            r.roleName?.toLowerCase().includes("quản lí") ||
+            r.roleName?.toLowerCase().includes("manager")
+        );
+        if (managerRole) {
+          setManagerData((prev) => ({ ...prev, RoleId: managerRole.id }));
+        }
+      });
+    }
+  }, [open]);
 
   useEffect(() => {
     if (open && nameRef.current) {
@@ -42,66 +87,58 @@ const AddSchool = ({ open, onClose, onSuccess }) => {
     }
   }, [open]);
 
-  useEffect(() => {
-    if (open) {
-      setFormData({ name: "", email: "", address: "" });
+  const handleCancel = () => onClose();
+
+  const handleSave = async () => {
+    if (!schoolData.name.trim()) {
+      toast.error("Tên trường không được để trống!");
+      return;
     }
-  }, [open]);
 
-  const handleCancel = () => {
-    setFormData({ name: "", email: "", address: "" });
-    onClose();
-  };
+    if (managerData.Username.trim() && !managerData.Name.trim()) {
+      toast.error("Họ tên quản lý không được để trống!");
+      return;
+    }
 
+    setLoading(true);
 
-const handleSave = async () => {
-  if (!formData.name.trim()) {
-    toast.error("Tên trường không được để trống!");
-    return;
-  }
+    const payload = {
+      name: schoolData.name.trim(),
+      address: schoolData.address.trim() || null,
+      email: schoolData.email.trim() || null,
+      status: true,
+      adminName: managerData.Name.trim() || null,
+      adminUsername: managerData.Username.trim() || null,
+      adminPassword:
+        managerData.Password.trim() || managerData.Username.trim() + "@123",
+      adminAddress: managerData.Address.trim() || null,
+      adminEmail: managerData.Email.trim() || null,
+      adminPhone: managerData.PhoneNumber.trim() || null,
+      adminDateOfBirth: managerData.DateOfBirth || null,
+      adminGender: managerData.Gender || null,
+      roleId: managerData.RoleId || null,
+    };
 
-  setLoading(true);
-
-  const payload = {
-    name: formData.name.trim(),
-    email: formData.email.trim(),
-    address: formData.address.trim(),
-    status: true,
-  };
-
-  fetchPost(
-    "/api/schools",
-    payload,
-    (res) => {
-      // FIX: Backend chỉ trả GUID string → vẫn thành công
-      if (res && (typeof res === "string" || res.id || res.success)) {
-        toast.success("Thêm trường học thành công!");
-        if (onSuccess) onSuccess(); // reload danh sách ngay
+    fetchPost(
+      "/api/schools",
+      payload,
+      () => {
+        toast.success("Thêm trường học và quản lý thành công!");
+        onSuccess?.();
         handleCancel();
-      } else {
-        toast.error("Thêm thất bại: Không nhận được ID từ server");
-        console.error("Response bất ngờ:", res);
+      },
+      (err) => {
+        const message =
+          err?.title || err?.message || "Đã có lỗi xảy ra khi thêm trường học";
+        toast.error(message);
+        setLoading(false);
       }
-    },
-    (error) => {
-      toast.error(error?.title || "Lỗi khi thêm trường học");
-    },
-    () => setLoading(false)
-  );
-};
+    );
+  };
+
   return (
-    <Dialog
-      open={open}
-      onClose={(event, reason) => {
-        if (reason !== "backdropClick" && reason !== "escapeKeyDown") {
-          onClose();
-        }
-      }}
-      maxWidth="md"
-      fullWidth
-      className="detail-school-dialog"
-    >
-      <DialogTitle className="dialog-title">
+    <Dialog open={open} maxWidth="lg" fullWidth>
+      <DialogTitle>
         <Box display="flex" alignItems="center" justifyContent="space-between">
           <Box display="flex" alignItems="center" gap={1.5}>
             <SchoolIcon color="primary" fontSize="large" />
@@ -109,7 +146,7 @@ const handleSave = async () => {
               Thêm trường học mới
             </Typography>
           </Box>
-          <IconButton size="small" onClick={handleCancel}>
+          <IconButton onClick={handleCancel}>
             <CloseIcon />
           </IconButton>
         </Box>
@@ -117,118 +154,158 @@ const handleSave = async () => {
 
       <Divider />
 
-      <DialogContent className="dialog-content">
-        <Grid container spacing={4}>
-          {/* Tên trường */}
+      <DialogContent dividers>
+        <Typography variant="h6" gutterBottom color="primary">
+          Thông tin trường học
+        </Typography>
+        <Grid container spacing={3} mb={4}>
           <Grid item xs={12}>
-            <Box display="flex" alignItems="center" gap={1} mb={1}>
-              <SchoolIcon fontSize="small" color="action" />
-              <Typography variant="subtitle1" color="textSecondary" fontWeight={500}>
-                Tên trường
-              </Typography>
-            </Box>
             <TextField
               inputRef={nameRef}
+              label="Tên trường *"
               fullWidth
-              value={formData.name}
-              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-              variant="outlined"
-              size="medium"
-              placeholder="Nhập tên trường..."
-              sx={{
-                "& .MuiOutlinedInput-root": {
-                  backgroundColor: "#fff",
-                  fontSize: "1.05rem",
-                  fontWeight: 400,
-                  borderRadius: "12px",
-                },
-              }}
+              value={schoolData.name}
+              onChange={(e) => setSchoolData({ ...schoolData, name: e.target.value })}
+            />
+          </Grid>
+          <Grid item xs={12} md={6}>
+            <TextField
+              label="Email liên hệ"
+              fullWidth
+              value={schoolData.email}
+              onChange={(e) => setSchoolData({ ...schoolData, email: e.target.value })}
+            />
+          </Grid>
+          <Grid item xs={12} md={6}>
+            <TextField
+              label="Địa chỉ"
+              fullWidth
+              value={schoolData.address}
+              onChange={(e) => setSchoolData({ ...schoolData, address: e.target.value })}
+            />
+          </Grid>
+        </Grid>
+
+        <Typography variant="h6" gutterBottom color="secondary" mt={4}>
+          <PersonIcon sx={{ verticalAlign: "middle", mr: 1 }} />
+          Thông tin người quản lý
+        </Typography>
+        <Grid container spacing={3}>
+          <Grid item xs={12} md={6}>
+            <TextField
+              label="Họ và tên"
+              fullWidth
+              value={managerData.Name}
+              onChange={(e) => setManagerData({ ...managerData, Name: e.target.value })}
+            />
+          </Grid>
+          <Grid item xs={12} md={6}>
+            <TextField
+              label="Ngày sinh"
+              type="date"
+              fullWidth
+              InputLabelProps={{ shrink: true }}
+              value={managerData.DateOfBirth}
+              onChange={(e) => setManagerData({ ...managerData, DateOfBirth: e.target.value })}
             />
           </Grid>
 
-          {/* Email */}
-          <Grid item xs={12}>
-            <Box display="flex" alignItems="center" gap={1} mb={1}>
-              <EmailIcon fontSize="small" color="action" />
-              <Typography variant="subtitle1" color="textSecondary" fontWeight={500}>
-                Email liên hệ
-              </Typography>
-            </Box>
+          <Grid item xs={12} md={6}>
+            <FormControl fullWidth sx={{ minWidth: 120 }}>
+              <InputLabel>Giới tính</InputLabel>
+              <Select
+                value={managerData.Gender}
+                label="Giới tính"
+                onChange={(e) => setManagerData({ ...managerData, Gender: e.target.value })}
+              >
+                <MenuItem value=""><em>Chưa chọn</em></MenuItem>
+                <MenuItem value="Nam">Nam</MenuItem>
+                <MenuItem value="Nữ">Nữ</MenuItem>
+                <MenuItem value="Khác">Khác</MenuItem>
+              </Select>
+            </FormControl>
+          </Grid>
+
+          <Grid item xs={12} md={6}>
             <TextField
+              label="Số điện thoại"
               fullWidth
-              value={formData.email}
-              onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-              variant="outlined"
-              size="medium"
-              placeholder="example@school.edu.vn"
-              sx={{
-                "& .MuiOutlinedInput-root": {
-                  backgroundColor: "#fff",
-                  fontSize: "1.05rem",
-                  borderRadius: "12px",
-                },
-              }}
+              value={managerData.PhoneNumber}
+              onChange={(e) => setManagerData({ ...managerData, PhoneNumber: e.target.value })}
             />
           </Grid>
 
-          {/* Địa chỉ */}
-          <Grid item xs={12}>
-            <Box display="flex" alignItems="center" gap={1} mb={1}>
-              <LocationOnIcon fontSize="small" color="action" />
-              <Typography variant="subtitle1" color="textSecondary" fontWeight={500}>
-                Địa chỉ
-              </Typography>
-            </Box>
+          <Grid item xs={12} md={6}>
             <TextField
+              label="Email"
               fullWidth
-              value={formData.address}
-              onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-              variant="outlined"
-              multiline
-              rows={3}
-              size="medium"
-              placeholder="Nhập địa chỉ đầy đủ..."
-              sx={{
-                "& .MuiOutlinedInput-root": {
-                  backgroundColor: "#fff",
-                  fontSize: "1.05rem",
-                  borderRadius: "12px",
-                  alignItems: "flex-start",
-                  pt: 1.8,
-                  width: "calc(100% + 110px)",
-                },
-                "& .MuiOutlinedInput-inputMultiline": {
-                  padding: "10px 16px",
-                  lineHeight: 1.6,
-                },
-              }}
+              value={managerData.Email}
+              onChange={(e) => setManagerData({ ...managerData, Email: e.target.value })}
             />
+          </Grid>
+
+          <Grid item xs={12} md={6}>
+            <TextField
+              label="Địa chỉ"
+              fullWidth
+              value={managerData.Address}
+              onChange={(e) => setManagerData({ ...managerData, Address: e.target.value })}
+            />
+          </Grid>
+
+          <Grid item xs={12} md={6}>
+            <TextField
+              label="Tên đăng nhập"
+              fullWidth
+              value={managerData.Username}
+              onChange={(e) => setManagerData({ ...managerData, Username: e.target.value })}
+            />
+          </Grid>
+
+          <Grid item xs={12} md={6}>
+            <TextField
+              label="Mật khẩu"
+              type="password"
+              fullWidth
+              value={managerData.Password}
+              onChange={(e) => setManagerData({ ...managerData, Password: e.target.value })}
+            />
+          </Grid>
+
+          <Grid item xs={12} md={6}>
+            <FormControl fullWidth>
+              <InputLabel>Vai trò</InputLabel>
+              <Select
+                value={managerData.RoleId}
+                label="Vai trò"
+                onChange={(e) => setManagerData({ ...managerData, RoleId: e.target.value })}
+              >
+                <MenuItem value=""><em>Chưa chọn</em></MenuItem>
+                {roles.map((role) => (
+                  <MenuItem key={role.id} value={role.id}>
+                    {role.roleName}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
           </Grid>
         </Grid>
       </DialogContent>
 
       <Divider />
 
-      <DialogActions sx={{ p: 3, justifyContent: "flex-end", gap: 2 }}>
-        <Button
-          variant="outlined"
-          startIcon={<CancelIcon />}
-          onClick={handleCancel}
-          size="large"
-          sx={{ minWidth: 120, borderRadius: "12px" }}
-        >
+      <DialogActions sx={{ p: 3, gap: 2 }}>
+        <Button variant="outlined" startIcon={<CancelIcon />} onClick={handleCancel} size="large">
           Hủy
         </Button>
         <Button
           variant="contained"
-          color="primary"
           startIcon={loading ? <CircularProgress size={20} /> : <SaveIcon />}
           onClick={handleSave}
           disabled={loading}
           size="large"
-          sx={{ minWidth: 140, borderRadius: "12px" }}
         >
-          {loading ? "Đang thêm..." : "Thêm mới"}
+          {loading ? "Đang xử lý..." : "Thêm trường"}
         </Button>
       </DialogActions>
     </Dialog>

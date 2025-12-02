@@ -6,7 +6,6 @@ import {
   TextField,
   InputAdornment,
   Button,
-  CircularProgress,
   MenuItem,
   Select,
   FormControl,
@@ -18,147 +17,140 @@ import {
   IconButton,
   Chip,
   Skeleton,
-  Fade,
   Zoom,
 } from "@mui/material";
 import SearchIcon from "@mui/icons-material/Search";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import PeopleIcon from "@mui/icons-material/People";
 import SchoolIcon from "@mui/icons-material/School";
-import LockIcon from "@mui/icons-material/Lock";
-import LockOpenIcon from "@mui/icons-material/LockOpen";
+import DeleteForeverIcon from "@mui/icons-material/DeleteForever";
+import AddIcon from "@mui/icons-material/Add";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
-import { fetchGet, fetchPut } from "../../../lib/httpHandler.js";
+
+import { fetchGet, fetchDelete } from "../../../lib/httpHandler.js";
 import StudentManagement from "../StudentManagement/StudentManagement.jsx";
+import AddClass from "../../../components/Admin/ClassManagement/AddClass/AddClass.jsx";
 import { showYesNoMessageBox } from "../../../components/MessageBox/YesNoMessageBox/showYesNoMessgeBox.js";
-import "./ClassManagement.css";
+
+const GRADE_OPTIONS = [
+  { value: "1", label: "Lớp 1" },
+  { value: "2", label: "Lớp 2" },
+  { value: "3", label: "Lớp 3" },
+  { value: "4", label: "Lớp 4" },
+  { value: "5", label: "Lớp 5" },
+];
 
 export default function ClassManagement() {
   const [classes, setClasses] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedGrade, setSelectedGrade] = useState("all");
-  const [selectedYear, setSelectedYear] = useState("all");
-  const [loading, setLoading] = useState(true);
-  const [selectedClass, setSelectedClass] = useState(null); // lớp đang xem học sinh
+  const [selectedClass, setSelectedClass] = useState(null);
+  const [openAdd, setOpenAdd] = useState(false);
 
-  // ===================================================================
-  // === LẤY DANH SÁCH LỚP ===
-  // ===================================================================
-  const fetchClasses = useCallback(() => {
-    setLoading(true);
-    fetchGet(
-      "/api/classes",
-      (data) => {
-        const validClasses = (Array.isArray(data) ? data : []).map((item, idx) => ({
-          ...item,
-          id: item.id || `temp-${Date.now()}-${idx}`,
-          className: item.className || "Chưa đặt tên",
-          gradeName: item.grade?.name || "Chưa có khối",
-          gradeId: item.grade?.id,
-          schoolYear: item.schoolYear || "Chưa xác định",
-          studentCount: item.students?.length || 0,
-          status: item.status ?? true,
-        }));
-        setClasses(validClasses);
-        setLoading(false);
-      },
-      (error) => {
-        toast.error(error.title || "Lỗi tải danh sách lớp");
-        setClasses([]);
-        setLoading(false);
-      }
-    );
-  }, []);
+const fetchUserAndClasses = useCallback(async () => {
+  setLoading(true);
 
-  useEffect(() => {
-    fetchClasses();
-  }, [fetchClasses]);
-
-  // ===================================================================
-  // === FILTER OPTIONS ===
-  // ===================================================================
-  const gradeOptions = useMemo(() => {
-    const grades = [...new Set(classes.map((c) => c.gradeName).filter(Boolean))];
-    return ["all", ...grades.sort()];
-  }, [classes]);
-
-  const yearOptions = useMemo(() => {
-    const years = [...new Set(classes.map((c) => c.schoolYear).filter(Boolean))];
-    return ["all", ...years.sort((a, b) => b.localeCompare(a))];
-  }, [classes]);
-
-  // ===================================================================
-  // === LỌC DỮ LIỆU ===
-  // ===================================================================
-  const filteredClasses = useMemo(() => {
-    let result = classes;
-
-    if (searchTerm.trim()) {
-      const lower = searchTerm.toLowerCase();
-      result = result.filter(
-        (c) =>
-          c.className.toLowerCase().includes(lower) ||
-          c.gradeName.toLowerCase().includes(lower) ||
-          c.schoolYear.toLowerCase().includes(lower)
-      );
-    }
-
-    if (selectedGrade !== "all") {
-      result = result.filter((c) => c.gradeName === selectedGrade);
-    }
-
-    if (selectedYear !== "all") {
-      result = result.filter((c) => c.schoolYear === selectedYear);
-    }
-
-    return result;
-  }, [classes, searchTerm, selectedGrade, selectedYear]);
-
-  // ===================================================================
-  // === KHÓA / MỞ KHÓA ===
-  // ===================================================================
-  const handleToggleStatus = async (classId, currentStatus) => {
-    if (!classId || classId.startsWith("temp-")) {
-      toast.error("Không thể thay đổi lớp tạm thời");
+  try {
+    const accountId = localStorage.getItem("accountId");
+    if (!accountId) {
+      toast.error("Phiên đăng nhập hết hạn");
+      setLoading(false);
       return;
     }
 
-    const action = currentStatus ? "khóa" : "mở khóa";
-    const confirm = await showYesNoMessageBox(`Bạn có chắc muốn ${action} lớp này?`);
+ 
+    const user = await new Promise((resolve, reject) => {
+      fetchGet(
+        `/api/accounts/by-account/${accountId}`,
+        (data) => resolve(data),         
+        (err) => reject(err),            
+        () => reject("exception")         
+      );
+    });
+
+    if (!user || !user.schoolId) {
+      toast.error("Không tìm thấy thông tin trường học của bạn");
+      setLoading(false);
+      return;
+    }
+
+  
+    const classes = await new Promise((resolve, reject) => {
+      fetchGet(
+        `/api/classes/by-school/${user.schoolId}`,
+        (data) => resolve(data),
+        (err) => reject(err),
+        () => reject("exception")
+      );
+    });
+
+    console.log("Lớp học tải về:", classes);
+
+    if (!Array.isArray(classes)) {
+      throw new Error("Dữ liệu lớp không hợp lệ");
+    }
+
+    setClasses(
+      classes.map((cls) => ({
+        ...cls,
+        studentCount: cls.studentCount || 0,
+        isDeleted: cls.isDeleted || false,
+      }))
+    );
+
+  } catch (err) {
+    console.error(err);
+    toast.error("Không tải được danh sách lớp");
+    setClasses([]);
+  } finally {
+    setLoading(false);
+  }
+}, []);
+
+  useEffect(() => {
+    fetchUserAndClasses();
+  }, [fetchUserAndClasses]);
+
+  const filteredClasses = useMemo(() => {
+    return classes.filter(cls => {
+      if (cls.isDeleted) return false;
+      if (searchTerm.trim()) {
+        const term = searchTerm.toLowerCase();
+        if (!cls.className.toLowerCase().includes(term)) return false;
+      }
+      if (selectedGrade !== "all" && cls.grade !== selectedGrade) return false;
+      return true;
+    });
+  }, [classes, searchTerm, selectedGrade]);
+
+  const handleDeleteClass = async (classId, className) => {
+    const confirm = await showYesNoMessageBox(
+      `Bạn có chắc muốn <strong>khóa lớp ${className}</strong> không?<br><br>Lớp sẽ bị ẩn và không thể thêm học sinh mới.`
+    );
     if (!confirm) return;
 
-    const payload = { id: classId, status: !currentStatus };
-
-    fetchPut(
-      "/api/classes",
-      payload,
-      (res) => {
-        if (res.success || res.id) {
-          setClasses((prev) =>
-            prev.map((c) => (c.id === classId ? { ...c, status: !currentStatus } : c))
-          );
-          toast.success(`Lớp đã được ${action} thành công!`);
-        }
-      },
-      (error) => toast.error(error.title || `Lỗi ${action} lớp`)
-    );
+    try {
+      await fetchDelete(`/api/classes/${classId}`);
+      toast.success(`Đã khóa lớp ${className}`);
+      setClasses(prev => prev.filter(c => c.id !== classId));
+    } catch {
+      toast.error("Không thể khóa lớp");
+    }
   };
 
-  // ===================================================================
-  // === RENDER CARD LỚP HỌC ===
-  // ===================================================================
-  const renderClassGrid = () => {
+  const renderGrid = () => {
     if (loading) {
       return (
-        <Grid container spacing={4}>
-          {[1, 2, 3, 4, 5, 6].map((i) => (
+        <Grid container spacing={3}>
+          {[1, 2, 3, 4, 5, 6].map(i => (
             <Grid item xs={12} sm={6} md={4} lg={3} key={i}>
-              <Card className="class-card skeleton">
+              <Card sx={{ height: 220 }}>
                 <CardContent>
-                  <Skeleton variant="text" width="85%" height={50} />
+                  <Skeleton variant="text" width="80%" height={40} />
                   <Skeleton variant="text" width="60%" />
-                  <Skeleton variant="rectangular" height={80} sx={{ mt: 3, borderRadius: 3 }} />
+                  <Skeleton variant="rectangular" height={60} sx={{ mt: 2 }} />
                 </CardContent>
               </Card>
             </Grid>
@@ -171,56 +163,55 @@ export default function ClassManagement() {
       return (
         <Box textAlign="center" py={10}>
           <Typography variant="h6" color="text.secondary">
-            Không tìm thấy lớp học nào
+            {classes.length === 0 ? "Chưa có lớp học nào" : "Không tìm thấy lớp phù hợp"}
           </Typography>
         </Box>
       );
     }
 
     return (
-      <Grid container spacing={4}>
-        {filteredClasses.map((cls, index) => (
+      <Grid container spacing={3}>
+        {filteredClasses.map((cls, i) => (
           <Grid item xs={12} sm={6} md={4} lg={3} key={cls.id}>
-            <Zoom in style={{ transitionDelay: `${index * 50}ms` }}>
+            <Zoom in style={{ transitionDelay: `${i * 50}ms` }}>
               <Card
-                className={`class-card ${cls.status ? "active" : "locked"}`}
-                onClick={() => setSelectedClass(cls)}
                 raised
-                sx={{ height: '220px' }}
+                onClick={() => setSelectedClass(cls)}
+                sx={{
+                  height: 220,
+                  cursor: "pointer",
+                  transition: "all 0.3s",
+                  "&:hover": { transform: "translateY(-6px)", boxShadow: 12 }
+                }}
               >
-                <CardContent className="card-content">
-                  <Box className="class-header">
+                <CardContent sx={{ pb: 1 }}>
+                  <Box textAlign="center" mb={2}>
                     <SchoolIcon sx={{ fontSize: 48, color: "#1976d2" }} />
                   </Box>
-                  <Typography variant="h5" fontWeight={700} gutterBottom noWrap>
+                  <Typography variant="h6" fontWeight={700} noWrap>
                     {cls.className}
                   </Typography>
-                  <Typography variant="body2" color="text.secondary" gutterBottom>
-                    <strong>{cls.gradeName}</strong> • {cls.schoolYear}
+                  <Typography variant="body2" color="text.secondary">
+                    {GRADE_OPTIONS.find(g => g.value === cls.grade)?.label || `Lớp ${cls.grade}`}
                   </Typography>
-                  <Box className="student-count">
-                    <PeopleIcon sx={{ fontSize: 20 }} />
-                    <Typography variant="h6" fontWeight={600}>
+                  <Box display="flex" alignItems="center" gap={1} mt={2}>
+                    <PeopleIcon fontSize="small" />
+                    <Typography variant="body1" fontWeight={600}>
                       {cls.studentCount} học sinh
                     </Typography>
                   </Box>
                 </CardContent>
-                <CardActions className="card-actions">
-                  <Chip
-                    label={cls.status ? "Hoạt động" : "Đã khóa"}
-                    size="small"
-                    color={cls.status ? "success" : "error"}
-                    sx={{ fontWeight: 600 }}
-                  />
+                <CardActions sx={{ justifyContent: "space-between", pt: 0 }}>
+                  <Chip label="Hoạt động" size="small" color="success" />
                   <IconButton
                     size="small"
-                    color="inherit"
+                    color="error"
                     onClick={(e) => {
                       e.stopPropagation();
-                      handleToggleStatus(cls.id, cls.status);
+                      handleDeleteClass(cls.id, cls.className);
                     }}
                   >
-                    {cls.status ? <LockOpenIcon /> : <LockIcon />}
+                    <DeleteForeverIcon />
                   </IconButton>
                 </CardActions>
               </Card>
@@ -231,91 +222,75 @@ export default function ClassManagement() {
     );
   };
 
-  // ===================================================================
-  // === RENDER CHÍNH ===
-  // ===================================================================
   return (
-    <Box className="class-management-container">
+    <Box sx={{ p: { xs: 2, md: 3 } }}>
       <ToastContainer position="top-right" autoClose={3000} />
 
-      <Typography variant="h5" className="page-title" fontWeight={700}>
+      <Typography variant="h4" fontWeight={700} gutterBottom>
         Quản lý Lớp học
       </Typography>
 
-      {/* Nút Back + StudentManagement khi đang xem lớp */}
       {selectedClass ? (
-        <Fade in>
-          <Box>
+        <>
+          <Button
+            variant="outlined"
+            startIcon={<ArrowBackIcon />}
+            onClick={() => setSelectedClass(null)}
+            sx={{ mb: 3 }}
+          >
+            Quay lại
+          </Button>
+          <StudentManagement predefinedClassId={selectedClass.id} />
+        </>
+      ) : (
+        <>
+          <Box sx={{ mb: 4, display: "flex", flexWrap: "wrap", gap: 2, alignItems: "flex-end" }}>
+            <TextField
+              placeholder="Tìm kiếm tên lớp..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              size="small"
+              sx={{ minWidth: 280 }}
+              InputProps={{
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <SearchIcon />
+                  </InputAdornment>
+                ),
+              }}
+            />
+
+            <FormControl size="small" sx={{ minWidth: 140 }}>
+              <InputLabel>Khối lớp</InputLabel>
+              <Select value={selectedGrade} label="Khối lớp" onChange={(e) => setSelectedGrade(e.target.value)}>
+                <MenuItem value="all">Tất cả</MenuItem>
+                {GRADE_OPTIONS.map(g => (
+                  <MenuItem key={g.value} value={g.value}>{g.label}</MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+
             <Button
               variant="contained"
-              color="primary"
-              size="large"
-              startIcon={<ArrowBackIcon />}
-              onClick={() => setSelectedClass(null)}
-              sx={{ mb: 3, borderRadius: 3, px: 4, py: 1.5, fontWeight: 600 }}
+              startIcon={<AddIcon />}
+              onClick={() => setOpenAdd(true)}
             >
-              Quay lại danh sách lớp
+              Thêm lớp mới
             </Button>
-
-            {/* Truyền classId để StudentManagement tự lọc */}
-            <StudentManagement predefinedClassId={selectedClass.id} />
           </Box>
-        </Fade>
-      ) : (
-        /* Danh sách lớp học */
-        <Fade in>
-          <Box>
-            <Box className="toolbar">
-              <Box className="left-filters">
-                <TextField
-                  placeholder="Tìm kiếm lớp học..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  size="small"
-                  className="search-field"
-                  InputProps={{
-                    startAdornment: (
-                      <InputAdornment position="start">
-                        <SearchIcon />
-                      </InputAdornment>
-                    ),
-                  }}
-                />
 
-                <FormControl size="small" className="filter-grade">
-                  <InputLabel>Khối</InputLabel>
-                  <Select
-                    value={selectedGrade}
-                    label="Khối"
-                    onChange={(e) => setSelectedGrade(e.target.value)}
-                  >
-                    <MenuItem value="all">Tất cả khối</MenuItem>
-                    {gradeOptions.filter((g) => g !== "all").map((g) => (
-                      <MenuItem key={g} value={g}>{g}</MenuItem>
-                    ))}
-                  </Select>
-                </FormControl>
-
-                <FormControl size="small" className="filter-year">
-                  <InputLabel>Niên khóa</InputLabel>
-                  <Select
-                    value={selectedYear}
-                    label="Niên khóa"
-                    onChange={(e) => setSelectedYear(e.target.value)}
-                  >
-                    <MenuItem value="all">Tất cả</MenuItem>
-                    {yearOptions.filter((y) => y !== "all").map((y) => (
-                      <MenuItem key={y} value={y}>{y}</MenuItem>
-                    ))}
-                  </Select>
-                </FormControl>
-              </Box>
-            </Box>
-
-            <Box mt={5}>{renderClassGrid()}</Box>
-          </Box>
-        </Fade>
+          {renderGrid()}
+        </>
       )}
+
+      <AddClass
+        open={openAdd}
+        onClose={() => setOpenAdd(false)}
+        onSuccess={() => {
+          setOpenAdd(false);
+          fetchUserAndClasses();
+        }}
+      />
     </Box>
   );
 }

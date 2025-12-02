@@ -14,94 +14,173 @@ import {
   TextField,
   MenuItem,
   CircularProgress,
+  InputAdornment,
 } from "@mui/material";
 import CloseIcon from "@mui/icons-material/Close";
 import SaveIcon from "@mui/icons-material/Save";
 import CancelIcon from "@mui/icons-material/Cancel";
 import ClassIcon from "@mui/icons-material/Class";
+import ArrowUpwardIcon from "@mui/icons-material/ArrowUpward";
+import ArrowDownwardIcon from "@mui/icons-material/ArrowDownward";
+import SchoolIcon from "@mui/icons-material/School";
 
 import { toast } from "react-toastify";
-import { fetchPost, fetchGet } from "../../../../lib/httpHandler.js";
+import { fetchGet, fetchPost } from "../../../../lib/httpHandler.js";
+
+const GRADES_FIXED = [
+  { value: "1", label: "Lớp 1" },
+  { value: "2", label: "Lớp 2" },
+  { value: "3", label: "Lớp 3" },
+  { value: "4", label: "Lớp 4" },
+  { value: "5", label: "Lớp 5" },
+];
 
 const AddClass = ({ open, onClose, onSuccess }) => {
   const [loading, setLoading] = useState(false);
-  const [grades, setGrades] = useState([]);
+  const [saving, setSaving] = useState(false);
+  const [schoolName, setSchoolName] = useState("");
   const [formData, setFormData] = useState({
     className: "",
-    gradeId: "",
+    grade: "",
+    schoolId: "",
+    schoolYear: "",
   });
 
   const nameRef = useRef(null);
 
-  useEffect(() => {
-    fetchGet(
-      "/api/grades",
-      (data) => setGrades(Array.isArray(data) ? data : []),
-      () => toast.error("Lỗi tải khối lớp")
-    );
-  }, []);
+useEffect(() => {
+  if (!open) return;
 
+  const loadSchoolInfo = async () => {
+    setLoading(true);
+
+    try {
+      const accountId = localStorage.getItem("accountId");
+      if (!accountId) {
+        toast.error("Phiên đăng nhập hết hạn");
+        onClose();
+        return;
+      }
+
+
+      const user = await new Promise((resolve, reject) => {
+        fetchGet(
+          `/api/accounts/by-account/${accountId}`,
+          resolve,
+          reject,
+          () => reject(new Error("Network error"))
+        );
+      });
+
+      if (!user || !user.schoolId) {
+        toast.error("Không tìm thấy trường học của bạn");
+        onClose();
+        return;
+      }
+
+
+      const school = await new Promise((resolve, reject) => {
+        fetchGet(
+          `/api/schools/${user.schoolId}`,
+          resolve,
+          reject,
+          () => reject(new Error("Failed to fetch school"))
+        );
+      });
+
+      if (!school || !school.name) {
+        toast.error("Không tải được thông tin trường");
+        onClose();
+        return;
+      }
+
+
+      setFormData(prev => ({
+        ...prev,
+        schoolId: user.schoolId,
+        schoolYear: getCurrentSchoolYear(),
+      }));
+      setSchoolName(school.name);
+
+    } catch (error) {
+      console.error("Lỗi tải thông tin trường:", error);
+      toast.error("Không thể tải thông tin trường học");
+      onClose();
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  loadSchoolInfo();
+}, [open, onClose]);
   useEffect(() => {
     if (open && nameRef.current) {
-      setTimeout(() => nameRef.current?.focus(), 150);
+      setTimeout(() => nameRef.current?.focus(), 100);
     }
     if (open) {
-      setFormData({ className: "", gradeId: "" });
+      setFormData(prev => ({ ...prev, className: "", grade: "" }));
     }
   }, [open]);
 
-  const handleCancel = () => {
-    setFormData({ className: "", gradeId: "" });
-    onClose();
+  const getCurrentSchoolYear = () => {
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = now.getMonth();
+    return month >= 7 ? `${year}-${year + 1}` : `${year - 1}-${year}`;
   };
 
-  const handleSave = async () => {
+  const adjustSchoolYear = (direction) => {
+    const [start] = formData.schoolYear.split("-");
+    const startYear = parseInt(start);
+    if (isNaN(startYear)) return;
+    const newStart = direction === "up" ? startYear + 1 : startYear - 1;
+    setFormData(prev => ({ ...prev, schoolYear: `${newStart}-${newStart + 1}` }));
+  };
+
+  const handleCancel = () => onClose();
+
+  const handleSave = () => {
     if (!formData.className.trim()) {
-      toast.error("Tên lớp không được để trống!");
+      toast.error("Vui lòng nhập tên lớp");
       return;
     }
-    if (!formData.gradeId) {
-      toast.error("Vui lòng chọn khối lớp!");
+    if (!formData.grade) {
+      toast.error("Vui lòng chọn khối lớp");
+      return;
+    }
+    if (!formData.schoolYear.match(/^\d{4}-\d{4}$/)) {
+      toast.error("Năm học không hợp lệ (VD: 2024-2025)");
       return;
     }
 
-    setLoading(true);
+    setSaving(true);
 
     const payload = {
       className: formData.className.trim(),
-      gradeId: formData.gradeId,
-      status: true,
+      grade: formData.grade,
+      schoolId: formData.schoolId,
+      schoolYear: formData.schoolYear,
     };
 
     fetchPost(
       "/api/classes",
       payload,
-      (res) => {
-        const isOk = res && (typeof res === "string" || res.id || res.success);
-        if (isOk) {
-          toast.success("Thêm lớp học thành công!");
-          if (onSuccess) onSuccess();
-          handleCancel();
-        } else {
-          toast.error("Thêm thất bại");
-        }
+      () => {
+        toast.success("Thêm lớp học thành công!");
+        onSuccess?.();
+        handleCancel();
       },
-      (error) => toast.error(error?.title || "Lỗi thêm lớp"),
-      () => setLoading(false)
+      (error) => {
+        toast.error(error?.title || "Thêm lớp thất bại");
+        setSaving(false);
+      },
+      () => setSaving(false)
     );
   };
 
   return (
-    <Dialog
-      open={open}
-      onClose={(e, reason) => {
-        if (reason !== "backdropClick" && reason !== "escapeKeyDown") onClose();
-      }}
-      maxWidth="md"
-      fullWidth
-      className="detail-school-dialog"
-    >
-      <DialogTitle className="dialog-title">
+    <Dialog open={open} onClose={handleCancel} maxWidth="sm" fullWidth>
+      <DialogTitle>
         <Box display="flex" alignItems="center" justifyContent="space-between">
           <Box display="flex" alignItems="center" gap={1.5}>
             <ClassIcon color="primary" fontSize="large" />
@@ -117,81 +196,128 @@ const AddClass = ({ open, onClose, onSuccess }) => {
 
       <Divider />
 
-      <DialogContent className="dialog-content">
-        <Grid container spacing={4}>
-          <Grid item xs={12}>
-            <Box display="flex" alignItems="center" gap={1} mb={1}>
-              <ClassIcon fontSize="small" color="action" />
-              <Typography variant="subtitle1" color="textSecondary" fontWeight={500}>
+      <DialogContent dividers>
+        {loading ? (
+          <Box textAlign="center" py={6}>
+            <CircularProgress />
+            <Typography mt={2}>Đang tải thông tin trường...</Typography>
+          </Box>
+        ) : (
+          <Grid container spacing={3}>
+            {/* Tên trường - chỉ đọc */}
+            <Grid item xs={12}>
+              <Typography fontWeight={500} color="text.secondary" gutterBottom>
+                Trường học
+              </Typography>
+              <TextField
+                fullWidth
+                value={schoolName}
+                disabled
+                variant="outlined"
+                InputProps={{
+                  startAdornment: (
+                    <InputAdornment position="start">
+                      <SchoolIcon color="action" />
+                    </InputAdornment>
+                  ),
+                }}
+              />
+            </Grid>
+
+            {/* Tên lớp */}
+            <Grid item xs={12}>
+              <Typography fontWeight={500} color="text.secondary" gutterBottom>
                 Tên lớp
               </Typography>
-            </Box>
-            <TextField
-              inputRef={nameRef}
-              fullWidth
-              value={formData.className}
-              onChange={(e) => setFormData({ ...formData, className: e.target.value })}
-              variant="outlined"
-              size="medium"
-              placeholder="Ví dụ: 10A1"
-              sx={{
-                "& .MuiOutlinedInput-root": {
-                  backgroundColor: "#fff",
-                  fontSize: "1.05rem",
-                  fontWeight: 400,
-                  borderRadius: "12px",
-                },
-              }}
-            />
-          </Grid>
+              <TextField
+                inputRef={nameRef}
+                fullWidth
+                placeholder="Ví dụ: 5A1, 3B2..."
+                value={formData.className}
+                onChange={(e) => setFormData({ ...formData, className: e.target.value })}
+                variant="outlined"
+                disabled={saving}
+              />
+            </Grid>
 
-          <Grid item xs={12}>
-            <Box display="flex" alignItems="center" gap={1} mb={1}>
-              <Typography variant="subtitle1" color="textSecondary" fontWeight={500}>
+            {/* Khối lớp */}
+            <Grid item xs={12} sm={6}>
+              <Typography fontWeight={500} color="text.secondary" gutterBottom>
                 Khối lớp
               </Typography>
-            </Box>
-            <TextField
-              select
-              fullWidth
-              value={formData.gradeId}
-              onChange={(e) => setFormData({ ...formData, gradeId: e.target.value })}
-              variant="outlined"
-              size="medium"
-              sx={{
-                "& .MuiOutlinedInput-root": {
-                  backgroundColor: "#fff",
-                  fontSize: "1.05rem",
-                  borderRadius: "12px",
-                },
-              }}
-            >
-              {grades.map((g) => (
-                <MenuItem key={g.id} value={g.id}>
-                  {g.name}
-                </MenuItem>
-              ))}
-            </TextField>
+              <TextField
+                select
+                fullWidth
+                value={formData.grade}
+                onChange={(e) => setFormData({ ...formData, grade: e.target.value })}
+                variant="outlined"
+                disabled={saving}
+              >
+                {GRADES_FIXED.map((g) => (
+                  <MenuItem key={g.value} value={g.value}>{g.label}</MenuItem>
+                ))}
+              </TextField>
+            </Grid>
+
+            {/* Năm học */}
+            <Grid item xs={12} sm={6}>
+              <Typography fontWeight={500} color="text.secondary" gutterBottom>
+                Năm học
+              </Typography>
+              <TextField
+                fullWidth
+                value={formData.schoolYear}
+                onChange={(e) => {
+                  const val = e.target.value.replace(/[^\d-]/g, "");
+                  if (/^\d{0,4}-?\d{0,4}$/.test(val)) {
+                    setFormData(prev => ({ ...prev, schoolYear: val }));
+                  }
+                }}
+                placeholder="2024-2025"
+                variant="outlined"
+                disabled={saving}
+                InputProps={{
+                  startAdornment: (
+                    <InputAdornment position="start">
+                      <IconButton size="small" onClick={() => adjustSchoolYear("down")} disabled={saving}>
+                        <ArrowDownwardIcon fontSize="small" />
+                      </IconButton>
+                    </InputAdornment>
+                  ),
+                  endAdornment: (
+                    <InputAdornment position="end">
+                      <IconButton size="small" onClick={() => adjustSchoolYear("up")} disabled={saving}>
+                        <ArrowUpwardIcon fontSize="small" />
+                      </IconButton>
+                    </InputAdornment>
+                  ),
+                }}
+              />
+            </Grid>
           </Grid>
-        </Grid>
+        )}
       </DialogContent>
 
       <Divider />
 
-      <DialogActions sx={{ p: 3, justifyContent: "flex-end", gap: 2 }}>
-        <Button variant="outlined" startIcon={<CancelIcon />} onClick={handleCancel} size="large" sx={{ minWidth: 120, borderRadius: "12px" }}>
+      <DialogActions sx={{ p: 3, gap: 2 }}>
+        <Button
+          variant="outlined"
+          startIcon={<CancelIcon />}
+          onClick={handleCancel}
+          disabled={saving || loading}
+          size="large"
+        >
           Hủy
         </Button>
         <Button
           variant="contained"
-          color="primary"
-          startIcon={loading ? <CircularProgress size={20} /> : <SaveIcon />}
+          startIcon={saving ? <CircularProgress size={20} /> : <SaveIcon />}
           onClick={handleSave}
-          disabled={loading}
+          disabled={saving || loading || !formData.schoolId}
           size="large"
-          sx={{ minWidth: 140, borderRadius: "12px" }}
         >
-          {loading ? "Đang thêm..." : "Thêm mới"}
+          {saving ? "Đang lưu..." : "Thêm lớp"}
         </Button>
       </DialogActions>
     </Dialog>

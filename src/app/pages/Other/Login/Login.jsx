@@ -1,4 +1,3 @@
-// src/app/pages/Auth/Login/Login.jsx
 import React, { useState } from "react";
 import {
   Box,
@@ -19,35 +18,38 @@ import VisibilityOffIcon from "@mui/icons-material/VisibilityOff";
 import SchoolIcon from "@mui/icons-material/School";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
-import { fetchPost } from "../../../lib/httpHandler"
+import { fetchPost } from "../../../lib/httpHandler";
 import "./Login.css";
 
 export default function Login() {
-  const [username, setEmail] = useState("");
+  const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
 
   const handleLogin = async (e) => {
     e.preventDefault();
-    if (!username || !password) {
-      toast.error("Vui lòng nhập đầy đủ email và mật khẩu!");
+
+    if (!username.trim() || !password) {
+      toast.error("Vui lòng nhập đầy đủ tên đăng nhập và mật khẩu!");
       return;
     }
 
     setLoading(true);
+
     fetchPost(
       "/api/accounts/login",
       { username, password },
       (result) => {
-        if (result.success && result.token) {
-          // Lưu token (giả sử dùng localStorage)
-          localStorage.setItem("token", result.token);
+        if (result.success && result.accessToken) {
+          localStorage.setItem("accessToken", result.accessToken);
+          localStorage.setItem("refreshToken", result.refreshToken || "");
           localStorage.setItem("accountId", result.accountId);
-          localStorage.setItem("user", JSON.stringify(result.user));
+          
           toast.success("Đăng nhập thành công! Đang chuyển hướng...");
+          
           setTimeout(() => {
-            window.location.href = "/admin"; // hoặc "/dashboard"
+            window.location.href = "/admin";
           }, 1500);
         } else {
           toast.error(result.message || "Đăng nhập thất bại!");
@@ -82,34 +84,27 @@ export default function Login() {
           <Box component="form" onSubmit={handleLogin} className="login-form">
             <TextField
               fullWidth
-              label="Email"
+              label="Tên đăng nhập"
               type="text"
               value={username}
-              onChange={(e) => setEmail(e.target.value)}
+              onChange={(e) => setUsername(e.target.value)}
               variant="outlined"
               className="login-input"
               placeholder="nhapemail@almas.edu.vn"
               disabled={loading}
-                sx={{
-    // TẮT HOÀN TOÀN VIỀN XANH + OUTLINE
-    '& .MuiOutlinedInput-notchedOutline': { border: 'none' },
-    '&:hover .MuiOutlinedInput-notchedOutline': { border: 'none' },
-    '&.Mui-focused .MuiOutlinedInput-notchedOutline': { border: 'none' },
-    '& .MuiOutlinedInput-root.Mui-focused': { outline: 'none' },
-
-    // ĐẨY LABEL LÊN CAO HƠN + NHỎ HƠN KHI FOCUS
-    '& .MuiInputLabel-root.Mui-focused': {
-      transform: 'translate(14px, -9px) scale(0.80)', // CAO HƠN, NHỎ HƠN
-      background: '#faf6f0',
-      padding: '0 6px',
-      color: '#8b4513',
-      fontWeight: 'bold',
-    },
-    '& .MuiInputLabel-root': {
-      color: '#8b4513',
-      fontWeight: 'normal',
-    },
-  }}
+              sx={{
+                '& .MuiOutlinedInput-notchedOutline': { border: "none" },
+                '&:hover .MuiOutlinedInput-notchedOutline': { border: "none" },
+                '&.Mui-focused .MuiOutlinedInput-notchedOutline': { border: "none" },
+                '& .MuiInputLabel-root.Mui-focused': {
+                  transform: "translate(14px, -9px) scale(0.80)",
+                  background: "#faf6f0",
+                  padding: "0 6px",
+                  color: "#8b4513",
+                  fontWeight: "bold",
+                },
+                '& .MuiInputLabel-root': { color: "#8b4513" },
+              }}
             />
 
             <TextField
@@ -123,25 +118,18 @@ export default function Login() {
               placeholder="••••••••"
               disabled={loading}
               sx={{
-    // TẮT HOÀN TOÀN VIỀN XANH + OUTLINE
-    '& .MuiOutlinedInput-notchedOutline': { border: 'none' },
-    '&:hover .MuiOutlinedInput-notchedOutline': { border: 'none' },
-    '&.Mui-focused .MuiOutlinedInput-notchedOutline': { border: 'none' },
-    '& .MuiOutlinedInput-root.Mui-focused': { outline: 'none' },
-
-    // ĐẨY LABEL LÊN CAO HƠN + NHỎ HƠN KHI FOCUS
-    '& .MuiInputLabel-root.Mui-focused': {
-      transform: 'translate(14px, -9px) scale(0.80)', // CAO HƠN, NHỎ HƠN
-      background: '#faf6f0',
-      padding: '0 6px',
-      color: '#8b4513',
-      fontWeight: 'bold',
-    },
-    '& .MuiInputLabel-root': {
-      color: '#8b4513',
-      fontWeight: 'normal',
-    },
-  }}
+                '& .MuiOutlinedInput-notchedOutline': { border: "none" },
+                '&:hover .MuiOutlinedInput-notchedOutline': { border: "none" },
+                '&.Mui-focused .MuiOutlinedInput-notchedOutline': { border: "none" },
+                '& .MuiInputLabel-root.Mui-focused': {
+                  transform: "translate(14px, -9px) scale(0.80)",
+                  background: "#faf6f0",
+                  padding: "0 6px",
+                  color: "#8b4513",
+                  fontWeight: "bold",
+                },
+                '& .MuiInputLabel-root': { color: "#8b4513" },
+              }}
               InputProps={{
                 endAdornment: (
                   <InputAdornment position="end">
@@ -149,7 +137,6 @@ export default function Login() {
                       onClick={() => setShowPassword(!showPassword)}
                       edge="end"
                       disabled={loading}
-                     
                     >
                       {showPassword ? <VisibilityOffIcon /> : <VisibilityIcon />}
                     </IconButton>
@@ -188,7 +175,6 @@ export default function Login() {
           </Box>
         </Paper>
       </Fade>
-
     </Box>
   );
 }
