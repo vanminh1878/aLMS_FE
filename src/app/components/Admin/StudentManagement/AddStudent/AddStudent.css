@@ -1,48 +1,103 @@
 /* src/components/Admin/StudentManagement/AddStudent/AddStudent.css */
 
-.add-student-dialog .dialog-title {
-  padding: 24px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: white;
-  text-align: center;
+.add-student-dialog .MuiPaper-root {
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
 }
 
-.add-student-dialog .dialog-title .MuiTypography-root,
-.add-student-dialog .dialog-title .MuiSvgIcon-root {
+.add-student-dialog .MuiDialogTitle-root {
+  padding: 24px 32px;
+  background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
   color: white !important;
 }
 
-.add-student-dialog .dialog-content {
+.add-student-dialog .MuiDialogTitle-root .MuiTypography-root,
+.add-student-dialog .MuiDialogTitle-root .MuiSvgIcon-root {
+  color: white !important;
+}
+
+.add-student-dialog .MuiDialogContent-root {
   padding: 32px 40px !important;
-  max-height: 70vh;
-  overflow-y: auto;
+  background-color: #f9fafb;
 }
 
-.add-student-dialog .MuiDialogActions-root {
-  background-color: #f8f9fa;
-  border-top: 1px solid #e0e0e0;
+/* === PHẦN THÔNG TIN HỌC SINH === */
+.student-info-section {
+  background: white;
+  border-radius: 16px;
+  padding: 28px 32px;
+  margin-bottom: 24px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.06);
+  border: 1px solid #e0e7ff;
 }
 
-.add-student-dialog .MuiPaper-root {
-  border-radius: 20px;
-  overflow: hidden;
-  box-shadow: 0 15px 50px rgba(0, 0, 0, 0.2);
+.student-info-section .section-title {
+  font-size: 1.4rem;
+  font-weight: 600;
+  color: #4338ca;
+  margin-bottom: 24px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+/* === PHẦN THÔNG TIN PHỤ HUYNH === */
+.parent-info-section {
+  background: linear-gradient(145deg, #f0f9ff 0%, #e0f2fe 100%);
+  border-radius: 16px;
+  padding: 28px 32px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.06);
+  border: 1px solid #bae6fd;
+}
+
+.parent-info-section .section-title {
+  font-size: 1.4rem;
+  font-weight: 600;
+  color: #0369a1;
+  margin-bottom: 24px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+/* Icon trong title */
+.section-title svg {
+  font-size: 28px;
+}
+
+/* Các field chung */
+.add-student-dialog .MuiTextField-root,
+.add-student-dialog .MuiFormControl-root {
+  margin-bottom: 20px;
 }
 
 .add-student-dialog .MuiOutlinedInput-root {
-  border-radius: 12px !important;
-  background-color: #fff;
-}
-
-.add-student-dialog .MuiOutlinedInput-root.Mui-focused .MuiOutlinedInput-notchedOutline {
-  border-color: #1976d2 !important;
-  border-width: 2px !important;
+  border-radius: 12px;
+  background-color: white;
+  transition: all 0.3s ease;
 }
 
 .add-student-dialog .MuiOutlinedInput-root:hover .MuiOutlinedInput-notchedOutline {
-  border-color: #1565c0;
+  border-color: #818cf8;
 }
 
-.add-student-dialog .MuiSelect-select {
-  padding: 12px 14px;
+.add-student-dialog .MuiOutlinedInput-root.Mui-focused .MuiOutlinedInput-notchedOutline {
+  border-color: #4f46e5;
+  border-width: 2px;
+}
+
+/* Nút hành động */
+.add-student-dialog .MuiDialogActions-root {
+  padding: 20px 40px;
+  background-color: #f8fafc;
+  border-top: 1px solid #e2e8f0;
+  gap: 16px;
+}
+
+.add-student-dialog .MuiButton-root {
+  border-radius: 12px;
+  text-transform: none;
+  font-weight: 600;
+  padding: 10px 24px;
 }

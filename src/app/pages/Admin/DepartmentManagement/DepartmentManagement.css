@@ -1,6 +1,5 @@
-/* src/components/Admin/ClassManagement/ClassManagement.css */
-
-.class-management-container {
+/* src/components/Admin/DepartmentManagement/DepartmentManagement.css */
+.department-management-container {
   padding: 2rem;
   min-height: 100vh;
   background-attachment: fixed;
@@ -9,7 +8,7 @@
 .page-title {
   font-size: 2.5rem;
   font-weight: 800;
-  background: linear-gradient(90deg, #1e40af, #3b82f6);
+  background: linear-gradient(90deg, #7c3aed, #a78bfa);
   -webkit-background-clip: text;
   background-clip: text;
   -webkit-text-fill-color: transparent;
@@ -28,29 +27,26 @@
 
 .left-filters {
   display: flex;
-  flex-wrap: wrap;
   gap: 1rem;
   align-items: center;
 }
 
-.search-field,
-.filter-grade {
+.search-field {
   background: rgba(255, 255, 255, 0.85) !important;
   backdrop-filter: blur(12px);
   border-radius: 16px !important;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
   transition: all 0.3s ease;
+  min-width: 300px;
 }
 
-.search-field:focus-within,
-.filter-grade:focus-within {
+.search-field:focus-within {
   background: white !important;
-  box-shadow: 0 8px 32px rgba(59, 130, 246, 0.2);
+  box-shadow: 0 8px 32px rgba(167, 139, 250, 0.3);
   transform: translateY(-2px);
 }
 
-.search-field .MuiOutlinedInput-root,
-.filter-grade .MuiOutlinedInput-root {
+.search-field .MuiOutlinedInput-root {
   border-radius: 16px;
   font-weight: 500;
 }
@@ -60,101 +56,96 @@
 }
 
 .search-field:hover .MuiOutlinedInput-notchedOutline {
-  border-color: #93c5fd;
+  border-color: #c4b5fd;
 }
 
-/* CARD ĐÃ ĐƯỢC CHỈNH LẠI HOÀN HẢO */
-.class-card {
-  height: 260px;                    /* Chiều cao vừa đẹp, không dư */
+.dept-card {
+  height: 260px;
   border-radius: 24px !important;
   overflow: hidden;
   background: rgba(255, 255, 255, 0.95);
-  border: 1px solid rgba(100, 150, 255, 0.15);
+  border: 1px solid rgba(167, 139, 250, 0.2);
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.08);
   backdrop-filter: blur(12px);
   transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
-  cursor: pointer;
+  cursor: default;
   position: relative;
   display: flex;
   flex-direction: column;
 }
 
-.class-card::before {
+.dept-card::before {
   content: '';
   position: absolute;
   inset: 0;
-  background: linear-gradient(135deg, rgba(59, 130, 246, 0.05), rgba(147, 197, 253, 0.03));
+  background: linear-gradient(135deg, rgba(167, 139, 250, 0.08), rgba(196, 181, 253, 0.04));
   opacity: 0;
   transition: opacity 0.4s ease;
   pointer-events: none;
 }
 
-.class-card:hover::before {
+.dept-card:hover::before {
   opacity: 1;
 }
 
-.class-card:hover {
+.dept-card:hover {
   transform: translateY(-12px) scale(1.02);
-  box-shadow: 0 32px 64px rgba(59, 130, 246, 0.25);
-  border-color: #3b82f6;
+  box-shadow: 0 32px 64px rgba(167, 139, 250, 0.3);
+  border-color: #a78bfa;
   z-index: 10;
 }
 
-/* Nội dung card - chặt chẽ, không dư khoảng cách */
 .card-content {
-  padding: 1.8rem 1.25rem 1rem !important;   /* Giảm padding trên một chút */
+  padding: 1.8rem 1.25rem 1rem !important;
   flex-grow: 1;
   display: flex;
   flex-direction: column;
   justify-content: center;
   align-items: center;
   text-align: center;
-  gap: 8px;                                 /* Khoảng cách đều đặn */
+  gap: 0px;
 }
 
-.class-header svg {
+.dept-header svg {
   font-size: 46px !important;
-  color: #3b82f6;
+  color: #a78bfa;
 }
 
-.class-card h5 {
+.dept-card h5 {
   font-size: 1.45rem !important;
   font-weight: 700 !important;
-  padding: 0 !important;
   margin-top: -10px;
-  background: linear-gradient(90deg, #1e40af, #2563eb);
+  background: linear-gradient(90deg, #7c3aed, #a855f7);
   -webkit-background-clip: text;
   background-clip: text;
   -webkit-text-fill-color: transparent;
 }
 
-.class-card .grade-label {
+.head-label {
   color: #64748b;
-  margin-bottom: -10px !important;                
-  padding: 0 !important;
-  font-weight: 500;
   font-size: 0.95rem;
-  margin-top: 4px;
+  font-weight: 500;
+  margin-top: -5px;
 }
 
-.student-count {
-  margin-top: 12px;
+.teacher-count {
+  margin-top: 5px;
   display: flex;
   align-items: center;
   gap: 8px;
-  background: linear-gradient(90deg, #dbeafe, #bfdbfe);
-  color: #1e40af;
+  background: linear-gradient(90deg, #e0e7ff, #c7d2fe);
+  color: #5b21b6;
   padding: 9px 18px;
   border-radius: 50px;
   font-weight: 700;
   font-size: 1.02rem;
-  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.2);
+  box-shadow: 0 4px 12px rgba(167, 139, 250, 0.25);
 }
 
 .card-actions {
   padding: 11px 16px !important;
-  background: linear-gradient(to right, #f0f9ff, #e0f2fe);
-  border-top: 1px solid #bae6fd;
+  background: linear-gradient(to right, #faf5ff, #f3e8ff);
+  border-top: 1px solid #ddd6fe;
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -162,11 +153,10 @@
 
 .card-actions .MuiChip-root {
   font-weight: 600;
-  background: linear-gradient(90deg, #86efac, #4ade80);
-  color: #166534;
+  background: linear-gradient(90deg, #c4b5fd, #a78bfa);
+  color: #581c87;
 }
 
-/* Nút Edit góc trên phải */
 .card-header-edit {
   position: absolute;
   top: 12px;
@@ -183,18 +173,17 @@
 }
 
 .card-header-edit .MuiIconButton-root:hover {
-  background: #3b82f6;
+  background: #a78bfa;
   color: white;
 }
 
-/* Lớp đã khóa */
-.class-card.locked {
+.dept-card.locked {
   opacity: 0.6;
   filter: grayscale(70%) brightness(0.9);
   pointer-events: none;
 }
 
-.class-card.locked::after {
+.dept-card.locked::after {
   content: "ĐÃ KHÓA";
   position: absolute;
   top: 12px;
@@ -226,7 +215,6 @@
 
 @media (max-width: 768px) {
   .page-title { font-size: 2rem; }
-  .search-field { width: 100% !important; }
-  .left-filters { width: 100%; justify-content: space-between; }
+  .search-field { min-width: auto; width: 100% !important; }
   .toolbar { flex-direction: column; align-items: stretch; }
 }

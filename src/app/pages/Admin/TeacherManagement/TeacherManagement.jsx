@@ -1,291 +1,181 @@
-// src/app/pages/Admin/TeacherManagement/TeacherManagement.jsx
+// src/components/Admin/TeacherManagement/TeacherManagement.jsx
 import React, { useEffect, useState, useMemo, useCallback } from "react";
 import {
   Box,
   Typography,
   TextField,
   InputAdornment,
-  Button,
   CircularProgress,
-  MenuItem,
-  Select,
-  FormControl,
-  InputLabel,
-  Grid,
-  Card,
-  CardContent,
-  CardActions,
-  IconButton,
   Chip,
-  Skeleton,
-  Fade,
-  Zoom,
-  Avatar,
-  Stack,
+  Tooltip,
+  IconButton,
 } from "@mui/material";
+import { DataGrid } from "@mui/x-data-grid";
 import SearchIcon from "@mui/icons-material/Search";
-import ArrowBackIcon from "@mui/icons-material/ArrowBack";
-import SchoolIcon from "@mui/icons-material/School";
-import PeopleIcon from "@mui/icons-material/People";
-import LockIcon from "@mui/icons-material/Lock";
-import LockOpenIcon from "@mui/icons-material/LockOpen";
-import AddIcon from "@mui/icons-material/Add";
+import VisibilityIcon from "@mui/icons-material/Visibility";
+import BlockIcon from "@mui/icons-material/Block";
+import CheckCircleIcon from "@mui/icons-material/CheckCircle";
+
+import { fetchGet, fetchPut } from "../../../lib/httpHandler.js";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
-import { fetchGet, fetchPut } from "../../../lib/httpHandler.js";
-import TeacherTable from "./TeacherTable.jsx"; 
 import { showYesNoMessageBox } from "../../../components/MessageBox/YesNoMessageBox/showYesNoMessgeBox.js";
 import "./TeacherManagement.css";
 
-export default function TeacherManagement() {
-  const [allTeachers, setAllTeachers] = useState([]);
-  const [departments, setDepartments] = useState([]);
+export default function TeacherManagement({ predefinedDepartmentId }) {
+  const [teachers, setTeachers] = useState([]);
   const [searchTerm, setSearchTerm] = useState("");
-  const [selectedSpecialization, setSelectedSpecialization] = useState("all");
   const [loading, setLoading] = useState(true);
-  const [selectedDept, setSelectedDept] = useState(null); // bộ môn đang xem
 
-  // ===================================================================
-  // === FETCH DATA ===
-  // ===================================================================
-  const fetchData = useCallback(() => {
+  const departmentId = predefinedDepartmentId;
+
+  const fetchTeachers = useCallback(async () => {
+    if (!departmentId) {
+      setLoading(false);
+      return;
+    }
+
     setLoading(true);
-    fetchGet("/api/teachers", (data) => {
-      const validTeachers = (Array.isArray(data) ? data : []).map((t, idx) => ({
-        ...t,
-        id: t.id || t.userId || `temp-${Date.now()}-${idx}`,
-        fullName: t.name || "Chưa đặt tên",
-        email: t.email || "Chưa có email",
-        phone: t.phoneNumber || "Chưa có SĐT",
-        departmentName: t.department?.departmentName || "Chưa có bộ môn",
-        departmentId: t.department?.id || null,
-        specialization: t.specialization || "Khác",
-        status: t.status ?? true,
-      }));
-
-      setAllTeachers(validTeachers);
-
-      // Tạo danh sách bộ môn
-      const deptMap = {};
-      validTeachers.forEach((t) => {
-        if (t.departmentId) {
-          if (!deptMap[t.departmentId]) {
-            deptMap[t.departmentId] = {
-              id: t.departmentId,
-              name: t.departmentName,
-              teacherCount: 0,
-              specializations: new Set(),
-            };
-          }
-          deptMap[t.departmentId].teacherCount++;
-          deptMap[t.departmentId].specializations.add(t.specialization);
-        }
+    try {
+      const data = await new Promise((resolve, reject) => {
+        fetchGet(`/api/teachers/by-department/${departmentId}`, resolve, reject);
       });
 
-      const deptList = Object.values(deptMap).map((d) => ({
-        ...d,
-        specializations: Array.from(d.specializations),
+      if (!Array.isArray(data)) throw new Error("Dữ liệu không hợp lệ");
+
+      const normalized = data.map((t) => ({
+        id: t.id || t.userId,
+        fullName: t.name || "Chưa có tên",
+        email: t.email || "Chưa có",
+        phone: t.phoneNumber || "Chưa có",
+        specialization: t.specialization || "Khác",
+        status: t.status ?? true,
+        accountId: t.accountId,
       }));
-      setDepartments(deptList);
+
+      setTeachers(normalized);
+    } catch (err) {
+      toast.error("Không tải được danh sách giáo viên");
+      setTeachers([]);
+    } finally {
       setLoading(false);
-    }, (err) => {
-      toast.error("Lỗi tải dữ liệu giáo viên");
-      setLoading(false);
-    });
-  }, []);
+    }
+  }, [departmentId]);
 
   useEffect(() => {
-    fetchData();
-  }, [fetchData]);
+    fetchTeachers();
+  }, [fetchTeachers]);
 
-  // ===================================================================
-  // === FILTER OPTIONS ===
-  // ===================================================================
-  const specializationOptions = useMemo(() => {
-    const specs = [...new Set(allTeachers.map((t) => t.specialization))];
-    return ["all", ...specs.sort()];
-  }, [allTeachers]);
+  const filteredTeachers = useMemo(() => {
+    if (!searchTerm.trim()) return teachers;
+    const term = searchTerm.toLowerCase();
+    return teachers.filter(
+      (t) =>
+        t.fullName.toLowerCase().includes(term) ||
+        t.email.toLowerCase().includes(term) ||
+        t.phone.includes(term)
+    );
+  }, [teachers, searchTerm]);
 
-  // ===================================================================
-  // === LỌC BỘ MÔN ===
-  // ===================================================================
-  const filteredDepts = useMemo(() => {
-    let result = departments;
+  const handleToggleStatus = async (accountId, currentStatus) => {
+    const confirm = await showYesNoMessageBox(
+      `Bạn có chắc muốn ${currentStatus ? "khóa" : "mở khóa"} tài khoản này?`
+    );
+    if (!confirm) return;
 
-    if (searchTerm.trim()) {
-      const lower = searchTerm.toLowerCase();
-      result = result.filter((d) =>
-        d.name.toLowerCase().includes(lower) ||
-        d.specializations.some((s) => s.toLowerCase().includes(lower))
-      );
-    }
-
-    if (selectedSpecialization !== "all") {
-      result = result.filter((d) =>
-        d.specializations.includes(selectedSpecialization)
-      );
-    }
-
-    return result;
-  }, [departments, searchTerm, selectedSpecialization]);
-
-  // ===================================================================
-  // === RENDER GRID BỘ MÔN ===
-  // ===================================================================
-  const renderDeptGrid = () => {
-    if (loading) {
-      return (
-        <Grid container spacing={4}>
-          {[1, 2, 3, 4].map((i) => (
-            <Grid item xs={12} sm={6} md={4} key={i}>
-              <Card className="dept-card skeleton">
-                <CardContent>
-                  <Skeleton variant="text" width="80%" height={50} />
-                  <Skeleton variant="text" width="60%" />
-                  <Skeleton variant="rectangular" height={80} sx={{ mt: 3, borderRadius: 3 }} />
-                </CardContent>
-              </Card>
-            </Grid>
-          ))}
-        </Grid>
-      );
-    }
-
-    if (filteredDepts.length === 0) {
-  return (
-    <Box textAlign="center" py={12}>
-      <Typography variant="h6" color="text.secondary" fontWeight={500}>
-        {departments.length === 0 
-          ? "Chưa có bộ môn nào" 
-          : "Không tìm thấy bộ môn nào phù hợp"}
-      </Typography>
-    </Box>
-  );
-}
-
-    return (
-      <Grid container spacing={4}>
-        {filteredDepts.map((dept, index) => (
-          <Grid item xs={12} sm={6} md={4} key={dept.id}>
-            <Zoom in style={{ transitionDelay: `${index * 70}ms` }}>
-              <Card
-                className="dept-card"
-                onClick={() => setSelectedDept(dept)}
-                raised
-              >
-                <CardContent className="dept-content">
-                  <Box className="dept-header">
-                    <SchoolIcon sx={{ fontSize: 50, color: "#6a1b9a" }} />
-                  </Box>
-                  <Typography variant="h5" fontWeight={700} gutterBottom>
-                    {dept.name}
-                  </Typography>
-                  <Typography variant="body2" color="text.secondary" gutterBottom>
-                    {dept.specializations.join(" • ")}
-                  </Typography>
-                  <Box className="teacher-count">
-                    <PeopleIcon sx={{ fontSize: 20 }} />
-                    <Typography variant="h6" fontWeight={600}>
-                      {dept.teacherCount} giáo viên
-                    </Typography>
-                  </Box>
-                </CardContent>
-                <CardActions className="dept-actions">
-                  <Chip label="Xem chi tiết" size="small" color="secondary" />
-                </CardActions>
-              </Card>
-            </Zoom>
-          </Grid>
-        ))}
-      </Grid>
+    fetchPut(
+      "/api/accounts",
+      { id: accountId, status: !currentStatus },
+      () => {
+        setTeachers((prev) =>
+          prev.map((t) => (t.accountId === accountId ? { ...t, status: !currentStatus } : t))
+        );
+        toast.success("Cập nhật thành công");
+      },
+      () => toast.error("Cập nhật thất bại")
     );
   };
 
-  // ===================================================================
-  // === RENDER CHÍNH ===
-  // ===================================================================
+  const columns = [
+    { field: "fullName", headerName: "Họ tên", flex: 1, minWidth: 200 },
+    { field: "email", headerName: "Email", width: 200 },
+    { field: "phone", headerName: "SĐT", width: 130 },
+    { field: "specialization", headerName: "Chuyên môn", width: 150 },
+    {
+      field: "status",
+      headerName: "Trạng thái",
+      width: 120,
+      renderCell: (params) => (
+        <Chip
+          icon={params.value ? <CheckCircleIcon /> : <BlockIcon />}
+          label={params.value ? "Hoạt động" : "Bị khóa"}
+          color={params.value ? "success" : "error"}
+          size="small"
+        />
+      ),
+    },
+    {
+      field: "actions",
+      headerName: "Thao tác",
+      width: 140,
+      sortable: false,
+      renderCell: (params) => (
+        <Box sx={{ display: "flex", gap: 0.5 }}>
+          <Tooltip title="Xem chi tiết">
+            <IconButton size="small" color="primary">
+              <VisibilityIcon />
+            </IconButton>
+          </Tooltip>
+          <Tooltip title={params.row.status ? "Khóa" : "Mở khóa"}>
+            <IconButton
+              size="small"
+              color={params.row.status ? "warning" : "success"}
+              onClick={() => handleToggleStatus(params.row.accountId, params.row.status)}
+            >
+              {params.row.status ? <BlockIcon /> : <CheckCircleIcon />}
+            </IconButton>
+          </Tooltip>
+        </Box>
+      ),
+    },
+  ];
+
   return (
     <Box className="teacher-management-container">
       <ToastContainer position="top-right" autoClose={3000} />
 
-      <Typography variant="h5" className="page-title" fontWeight={700} gutterBottom>
-        Quản lý Giáo viên
-      </Typography>
-
-      {selectedDept ? (
-        <Fade in>
-          <Box>
-            <Button
-              variant="contained"
-              color="secondary"
-              size="large"
-              startIcon={<ArrowBackIcon />}
-              onClick={() => setSelectedDept(null)}
-              sx={{ mb: 3, borderRadius: 3, px: 4, py: 1.5, fontWeight: 600 }}
-            >
-              Quay lại danh sách bộ môn
-            </Button>
-            <TeacherTable
-              department={selectedDept}
-              allTeachers={allTeachers}
-              onUpdateTeacher={(updated) => {
-                setAllTeachers((prev) =>
-                  prev.map((t) => (t.id === updated.id ? updated : t))
-                );
-              }}
-            />
-          </Box>
-        </Fade>
-      ) : (
-        <Fade in>
-          <Box>
-            <Box className="toolbar">
-              <Box className="left-filters">
-                <TextField
-                  placeholder="Tìm kiếm bộ môn hoặc chuyên môn..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  size="small"
-                  className="search-field"
-                  InputProps={{
-                    startAdornment: <InputAdornment position="start"><SearchIcon /></InputAdornment>,
-                  }}
-                />
-
-                <FormControl size="small" className="filter-spec">
-                  <InputLabel>Chuyên môn</InputLabel>
-                  <Select
-                    value={selectedSpecialization}
-                    label="Chuyên môn"
-                    onChange={(e) => setSelectedSpecialization(e.target.value)}
-                  >
-                    <MenuItem value="all">Tất cả</MenuItem>
-                    {specializationOptions
-                      .filter((s) => s !== "all")
-                      .map((s) => (
-                        <MenuItem key={s} value={s}>{s}</MenuItem>
-                      ))}
-                  </Select>
-                </FormControl>
-              </Box>
-            </Box>
-
-            <Box mt={5}>{renderDeptGrid()}</Box>
-          </Box>
-        </Fade>
-      )}
-
-      {/* NÚT THÊM GIÁO VIÊN */}
-      <Box className="add-button-fixed">
-        <Button
-          variant="contained"
-          startIcon={<AddIcon />}
-          className="add-teacher-btn"
-          size="large"
-        >
-          Thêm giáo viên
-        </Button>
+      <Box className="toolbar" sx={{ mb: 3 }}>
+        <TextField
+          placeholder="Tìm kiếm giáo viên..."
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          size="small"
+          InputProps={{
+            startAdornment: (
+              <InputAdornment position="start">
+                <SearchIcon />
+              </InputAdornment>
+            ),
+          }}
+          sx={{ width: 400 }}
+        />
       </Box>
+
+      {loading ? (
+        <Box sx={{ textAlign: "center", py: 8 }}>
+          <CircularProgress />
+          <Typography>Đang tải danh sách giáo viên...</Typography>
+        </Box>
+      ) : (
+        <DataGrid
+          rows={filteredTeachers}
+          columns={columns}
+          getRowId={(row) => row.id}
+          pageSizeOptions={[10, 25, 50]}
+          autoHeight
+          localeText={{ noRowsLabel: "Không có giáo viên nào trong tổ này" }}
+        />
+      )}
     </Box>
   );
 }

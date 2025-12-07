@@ -1,17 +1,16 @@
-// src/app/pages/Admin/StudentManagement/StudentManagement.jsx
 import React, { useEffect, useState, useMemo, useCallback } from "react";
 import {
   Box,
   Typography,
   TextField,
   InputAdornment,
-  IconButton,
   Button,
   CircularProgress,
   Chip,
   Tooltip,
   Dialog,
   DialogTitle,
+  IconButton,
   DialogContent,
   DialogActions,
   Divider,
@@ -20,220 +19,179 @@ import { DataGrid } from "@mui/x-data-grid";
 import SearchIcon from "@mui/icons-material/Search";
 import AddIcon from "@mui/icons-material/Add";
 import VisibilityIcon from "@mui/icons-material/Visibility";
-import EditIcon from "@mui/icons-material/Edit";
 import BlockIcon from "@mui/icons-material/Block";
 import CheckCircleIcon from "@mui/icons-material/CheckCircle";
-import PeopleIcon from "@mui/icons-material/People";
 
-// === IMPORT ADD STUDENT ===
 import AddStudent from "../../../components/Admin/StudentManagement/AddStudent/AddStudent.jsx";
-
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 
 import { fetchGet, fetchPut } from "../../../lib/httpHandler.js";
 import { showYesNoMessageBox } from "../../../components/MessageBox/YesNoMessageBox/showYesNoMessgeBox.js";
-
 import "./StudentManagement.css";
 
-export default function StudentManagement() {
+export default function StudentManagement({ predefinedClassId }) {
   const [students, setStudents] = useState([]);
   const [searchTerm, setSearchTerm] = useState("");
-  const [loading, setLoading] = useState(false);
-
-  // === MODAL PHỤ HUYNH ===
-  const [openParentModal, setOpenParentModal] = useState(false);
-  const [selectedParent, setSelectedParent] = useState(null);
-
-  // === MODAL THÊM HỌC SINH ===
+  const [loading, setLoading] = useState(true);
+  const [openDetail, setOpenDetail] = useState(false);
+  const [selectedStudent, setSelectedStudent] = useState(null);
   const [openAddStudent, setOpenAddStudent] = useState(false);
 
-  // === FETCH STUDENTS ===
-  const fetchStudents = useCallback(() => {
-    setLoading(true);
-    fetchGet(
-      "/api/students",
-      (data) => {
-        const validStudents = (Array.isArray(data) ? data : []).map((item, idx) => ({
-          ...item,
-          id: item.id || item.userId || `temp-${Date.now()}-${idx}`,
-          fullName: item.name || "Chưa đặt tên",
-          email: item.email || "Chưa có email",
-          phone: item.phoneNumber || "Chưa có SĐT",
-          className: item.class?.className || "Chưa phân lớp",
-          schoolName: item.school?.name || "Chưa có trường",
-          enrollDate: item.enrollDate
-            ? new Date(item.enrollDate).toLocaleDateString("vi-VN")
-            : "Chưa có",
-          status: item.status ?? true,
-          parent: item.parent || null,
-          parentInfo: item.parent
-            ? `${item.parent.name || ""} ${item.parent.phoneNumber ? `(${item.parent.phoneNumber})` : ""}`.trim() || "Chưa có"
-            : "Chưa có",
-          parentPhone: item.parent?.phoneNumber || "",
-        }));
-        setStudents(validStudents);
-        setLoading(false);
-      },
-      (error) => {
-        toast.error(error.title || "Lỗi tải danh sách học sinh");
-        setStudents([]);
-        setLoading(false);
-      },
-      () => setLoading(false)
-    );
-  }, []);
+  const classId = predefinedClassId;
 
+const fetchStudents = useCallback(async () => {
+  if (!classId) {
+    setLoading(false);
+    return;
+  }
+
+  setLoading(true);
+
+  try {
+ 
+    const profiles = await new Promise((resolve, reject) => {
+      fetchGet(
+        `/api/student-profiles/by-class/${classId}`,
+        (data) => resolve(data),          
+        (error) => reject(error),           
+        () => reject(new Error("Network error")) 
+      );
+    });
+
+    console.log("Fetched profiles:", profiles); 
+
+    const detailedStudents = await Promise.all(
+      profiles.map(async (profile) => {
+        const userId = profile.userId;
+
+        const userRes = await new Promise((resolve, reject) => {
+          fetchGet(
+            `/api/users/${userId}`,
+            resolve,
+            reject,
+            () => reject(new Error("Lỗi tải thông tin user"))
+          );
+        });
+
+        const accountRes = await new Promise((resolve, reject) => {
+          fetchGet(
+            `/api/accounts/${userRes.accountId}`,
+            resolve,
+            reject,
+            () => reject(new Error("Lỗi tải tài khoản"))
+          );
+        });
+
+        return {
+          id: userId,
+          studentName: userRes.name || "Chưa có tên",
+          dateOfBirth: userRes.dateOfBirth
+            ? new Date(userRes.dateOfBirth).toLocaleDateString("vi-VN")
+            : "Chưa có",
+          gender: userRes.gender === "Nam" ? "Nam" : userRes.gender === "Nữ" ? "Nữ" : "Khác",
+          enrollDate: profile.enrollDate
+            ? new Date(profile.enrollDate).toLocaleDateString("vi-VN")
+            : "Chưa có",
+          address: userRes.address || "Chưa có",
+          username: accountRes.username || "Chưa có",
+          status: accountRes.status ?? true,
+          accountId: accountRes.id,
+          userData: userRes,
+        };
+      })
+    );
+
+    setStudents(detailedStudents);
+  } catch (err) {
+    console.error("Lỗi tải học sinh:", err);
+    toast.error("Không thể tải danh sách học sinh");
+    setStudents([]);
+  } finally {
+    setLoading(false);
+  }
+}, [classId]);
   useEffect(() => {
     fetchStudents();
   }, [fetchStudents]);
 
-  // === TÌM KIẾM ===
   const filteredStudents = useMemo(() => {
     if (!searchTerm.trim()) return students;
-
-    const lower = searchTerm.toLowerCase();
+    const term = searchTerm.toLowerCase();
     return students.filter(
       (s) =>
-        s.fullName?.toLowerCase().includes(lower) ||
-        s.email?.toLowerCase().includes(lower) ||
-        s.phone?.toLowerCase().includes(lower) ||
-        s.parentInfo?.toLowerCase().includes(lower) ||
-        s.parentPhone?.toLowerCase().includes(lower)
+        s.studentName.toLowerCase().includes(term) ||
+        s.username.toLowerCase().includes(term)
     );
   }, [students, searchTerm]);
 
-  const handleSearch = (e) => setSearchTerm(e.target.value);
-
-  // === MODAL PHỤ HUYNH ===
-  const handleOpenParent = (parent) => {
-    if (parent) {
-      setSelectedParent(parent);
-      setOpenParentModal(true);
-    } else {
-      toast.info("Học sinh này chưa có phụ huynh.");
-    }
+  const handleOpenDetail = (student) => {
+    setSelectedStudent(student);
+    setOpenDetail(true);
   };
 
-  const handleCloseParentModal = () => {
-    setOpenParentModal(false);
-    setSelectedParent(null);
+  const handleCloseDetail = () => {
+    setOpenDetail(false);
+    setSelectedStudent(null);
   };
 
-  // === MODAL THÊM HỌC SINH ===
-  const handleOpenAddStudent = () => setOpenAddStudent(true);
-  const handleCloseAddStudent = () => setOpenAddStudent(false);
-  const handleAddSuccess = () => {
-    fetchStudents(); // Reload danh sách
-    handleCloseAddStudent();
-  };
-
-  // === KHÓA / MỞ KHÓA ===
-  const handleToggleStatus = async (studentId, currentStatus) => {
-    if (!studentId || studentId.startsWith("temp-")) {
-      toast.error("Không thể thay đổi trạng thái học sinh tạm thời.");
-      return;
-    }
-
-    const action = currentStatus ? "khóa" : "mở khóa";
+  const handleToggleStatus = async (accountId, currentStatus) => {
     const confirm = await showYesNoMessageBox(
-      `Bạn có chắc muốn ${action} học sinh này không?`
+      `Bạn có chắc muốn ${currentStatus ? "khóa" : "mở khóa"} tài khoản này?`
     );
     if (!confirm) return;
 
-    const payload = {
-      userId: studentId,
-      status: !currentStatus,
-    };
-
     fetchPut(
-      "/api/students/status",
-      payload,
-      (res) => {
-        if (res.success) {
-          setStudents((prev) =>
-            prev.map((s) =>
-              s.id === studentId ? { ...s, status: !currentStatus } : s
-            )
-          );
-          toast.success(`Học sinh đã được ${action} thành công!`);
-        } else {
-          toast.error(res.message || "Cập nhật thất bại");
-        }
+      "/api/accounts",
+      { id: accountId, status: !currentStatus },
+      () => {
+        setStudents((prev) =>
+          prev.map((s) =>
+            s.accountId === accountId ? { ...s, status: !currentStatus } : s
+          )
+        );
+        toast.success("Cập nhật trạng thái thành công");
       },
-      (error) => {
-        toast.error(error.title || `Lỗi khi ${action} học sinh`);
-      }
+      () => toast.error("Cập nhật thất bại")
     );
   };
 
-  // === CỘT BẢNG ===
   const columns = [
-    {
-      field: "fullName",
-      headerName: "Họ tên",
-      width: 180,
-      flex: 1,
-      renderCell: (params) => (
-        <Typography fontWeight={500}>{params.value}</Typography>
-      ),
-    },
-    { field: "email", headerName: "Email", width: 200, flex: 1 },
-    { field: "phone", headerName: "SĐT", width: 130 },
-    { field: "className", headerName: "Lớp", width: 120 },
-    { field: "schoolName", headerName: "Trường", width: 200, flex: 1 },
+    { field: "studentName", headerName: "Họ tên", flex: 1, minWidth: 180 },
+    { field: "username", headerName: "Tên đăng nhập", width: 140 },
+    { field: "gender", headerName: "Giới tính", width: 100 },
+    { field: "dateOfBirth", headerName: "Ngày sinh", width: 130 },
     { field: "enrollDate", headerName: "Ngày nhập học", width: 140 },
     {
       field: "status",
       headerName: "Trạng thái",
-      width: 110,
+      width: 120,
       renderCell: (params) => (
         <Chip
           icon={params.value ? <CheckCircleIcon /> : <BlockIcon />}
           label={params.value ? "Hoạt động" : "Bị khóa"}
           color={params.value ? "success" : "error"}
           size="small"
-          variant="outlined"
         />
       ),
     },
     {
       field: "actions",
       headerName: "Thao tác",
-      width: 180,
+      width: 140,
       sortable: false,
       renderCell: (params) => (
-        <Box className="action-buttons">
-          <Tooltip title="Xem chi tiết học sinh" arrow>
-            <IconButton size="small" color="primary">
+        <Box sx={{ display: "flex", gap: 0.5 }}>
+          <Tooltip title="Xem chi tiết">
+            <IconButton size="small" color="primary" onClick={() => handleOpenDetail(params.row)}>
               <VisibilityIcon />
             </IconButton>
           </Tooltip>
-
-          <Tooltip title="Chỉnh sửa học sinh" arrow>
-            <IconButton size="small" color="info">
-              <EditIcon />
-            </IconButton>
-          </Tooltip>
-
-          <Tooltip title={params.row.parent ? "Xem phụ huynh" : "Chưa có phụ huynh"} arrow>
-            <span>
-              <IconButton
-                size="small"
-                color="secondary"
-                onClick={() => handleOpenParent(params.row.parent)}
-                disabled={!params.row.parent}
-              >
-                <PeopleIcon />
-              </IconButton>
-            </span>
-          </Tooltip>
-
-          <Tooltip title={params.row.status ? "Khóa tài khoản" : "Mở khóa"} arrow>
+          <Tooltip title={params.row.status ? "Khóa tài khoản" : "Mở khóa"}>
             <IconButton
               size="small"
               color={params.row.status ? "warning" : "success"}
-              onClick={() => handleToggleStatus(params.row.id, params.row.status)}
+              onClick={() => handleToggleStatus(params.row.accountId, params.row.status)}
             >
               {params.row.status ? <BlockIcon /> : <CheckCircleIcon />}
             </IconButton>
@@ -247,12 +205,11 @@ export default function StudentManagement() {
     <Box className="student-management-container">
       <ToastContainer position="top-right" autoClose={3000} />
 
-      {/* Toolbar */}
       <Box className="toolbar">
         <TextField
-          placeholder="Tìm kiếm theo tên, email, SĐT, phụ huynh..."
+          placeholder="Tìm kiếm học sinh, tên đăng nhập..."
           value={searchTerm}
-          onChange={handleSearch}
+          onChange={(e) => setSearchTerm(e.target.value)}
           className="search-field"
           InputProps={{
             startAdornment: (
@@ -263,71 +220,69 @@ export default function StudentManagement() {
           }}
           sx={{ width: 400 }}
         />
-
         <Button
           variant="contained"
           startIcon={<AddIcon />}
-          className="add-button"
-          onClick={handleOpenAddStudent} // ĐÃ SỬA
+          onClick={() => setOpenAddStudent(true)}
         >
           Thêm học sinh
         </Button>
       </Box>
 
-      {/* Table */}
       <Box className="table-container">
         {loading ? (
-          <Box className="loading" sx={{ textAlign: "center", py: 4 }}>
+          <Box sx={{ textAlign: "center", py: 6 }}>
             <CircularProgress />
-            <Typography mt={2}>Đang tải danh sách học sinh...</Typography>
+            <Typography>Đang tải danh sách học sinh...</Typography>
           </Box>
         ) : (
           <DataGrid
             rows={filteredStudents}
             columns={columns}
             getRowId={(row) => row.id}
-            pageSizeOptions={[5, 10, 20, 50]}
+            pageSizeOptions={[10, 20, 50]}
             checkboxSelection
             disableRowSelectionOnClick
-            localeText={{ noRowsLabel: "Không có học sinh nào" }}
-            className="data-grid"
             autoHeight
+            localeText={{ noRowsLabel: "Không có học sinh nào trong lớp" }}
           />
         )}
       </Box>
 
-      {/* === MODAL THÊM HỌC SINH === */}
       <AddStudent
         open={openAddStudent}
-        onClose={handleCloseAddStudent}
-        onSuccess={handleAddSuccess}
+        onClose={() => setOpenAddStudent(false)}
+        classId={classId}
+        onSuccess={() => {
+          fetchStudents();
+          setOpenAddStudent(false);
+        }}
       />
 
-      {/* === MODAL CHI TIẾT PHỤ HUYNH === */}
-      <Dialog open={openParentModal} onClose={handleCloseParentModal} maxWidth="sm" fullWidth>
-        <DialogTitle>
-          <Typography variant="h6" fontWeight={600}>
-            Thông tin phụ huynh
-          </Typography>
-        </DialogTitle>
+      <Dialog open={openDetail} onClose={handleCloseDetail} maxWidth="sm" fullWidth>
+        <DialogTitle>Chi tiết học sinh</DialogTitle>
         <DialogContent dividers>
-          {selectedParent ? (
-            <Box>
-              <Typography><strong>Họ tên:</strong> {selectedParent.name || "Chưa có"}</Typography>
-              <Typography><strong>Email:</strong> {selectedParent.email || "Chưa có"}</Typography>
-              <Typography><strong>SĐT:</strong> {selectedParent.phoneNumber || "Chưa có"}</Typography>
-              <Typography><strong>Địa chỉ:</strong> {selectedParent.address || "Chưa có"}</Typography>
-              <Divider sx={{ my: 1 }} />
-              <Typography variant="caption" color="text.secondary">
-                Mối quan hệ: Phụ huynh của học sinh
+          {selectedStudent && (
+            <>
+              <Typography><strong>Họ tên:</strong> {selectedStudent.studentName}</Typography>
+              <Typography><strong>Tên đăng nhập:</strong> {selectedStudent.username}</Typography>
+              <Typography><strong>Giới tính:</strong> {selectedStudent.gender}</Typography>
+              <Typography><strong>Ngày sinh:</strong> {selectedStudent.dateOfBirth}</Typography>
+              <Typography><strong>Ngày nhập học:</strong> {selectedStudent.enrollDate}</Typography>
+              <Typography><strong>Địa chỉ:</strong> {selectedStudent.address}</Typography>
+              <Typography>
+                <strong>Trạng thái:</strong>{" "}
+                <Chip
+                  size="small"
+                  label={selectedStudent.status ? "Hoạt động" : "Bị khóa"}
+                  color={selectedStudent.status ? "success" : "error"}
+                />
               </Typography>
-            </Box>
-          ) : (
-            <Typography>Không có thông tin phụ huynh.</Typography>
+            </>
           )}
         </DialogContent>
         <DialogActions>
-          <Button onClick={handleCloseParentModal} variant="outlined">
+          <Button onClick={handleCloseDetail} variant="outlined">
             Đóng
           </Button>
         </DialogActions>

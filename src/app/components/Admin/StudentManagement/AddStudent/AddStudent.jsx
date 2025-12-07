@@ -8,7 +8,6 @@ import {
   Button,
   Grid,
   Typography,
-  Divider,
   Box,
   IconButton,
   TextField,
@@ -22,394 +21,331 @@ import CloseIcon from "@mui/icons-material/Close";
 import SaveIcon from "@mui/icons-material/Save";
 import CancelIcon from "@mui/icons-material/Cancel";
 import PersonIcon from "@mui/icons-material/Person";
-import EmailIcon from "@mui/icons-material/Email";
+import CakeIcon from "@mui/icons-material/Cake";
+import WcIcon from "@mui/icons-material/Wc";
 import PhoneIcon from "@mui/icons-material/Phone";
+import EmailIcon from "@mui/icons-material/Email";
+import LocationOnIcon from "@mui/icons-material/LocationOn";
 import CalendarTodayIcon from "@mui/icons-material/CalendarToday";
 import SchoolIcon from "@mui/icons-material/School";
-import CakeIcon from "@mui/icons-material/Cake";
-import PeopleIcon from "@mui/icons-material/People";
-import WcIcon from "@mui/icons-material/Wc";
-import LocationOnIcon from "@mui/icons-material/LocationOn";
 
 import { toast } from "react-toastify";
 import { fetchPost, fetchGet } from "../../../../lib/httpHandler.js";
+import "./AddStudent.css"; // Đừng quên import CSS
 
-import "./AddStudent.css";
-
-const AddStudent = ({ open, onClose, onSuccess }) => {
+const AddStudent = ({ open, onClose, onSuccess, classId }) => {
   const [loading, setLoading] = useState(false);
   const [classes, setClasses] = useState([]);
-  const [formData, setFormData] = useState({
-    name: "",
-    email: "",
-    phoneNumber: "",
-    dateOfBirth: "",
-    gender: "",
-    address: "",
-    classId: "",
-    enrollDate: new Date().toISOString().split("T")[0],
-    parentName: "",
-    parentPhone: "",
-    parentEmail: "",
-  });
-
+  const [selectedClassId, setSelectedClassId] = useState(classId || "");
   const nameRef = useRef(null);
 
-  // === TẢI DANH SÁCH LỚP ===
+  const [form, setForm] = useState({
+    studentName: "",
+    studentDateOfBirth: "",
+    studentEnrollDate: new Date().toISOString().split("T")[0],
+    gender: "Nam",
+    parentName: "",
+    parentPhone: "",
+    parentDateOfBirth: "",
+    parentGender: "Nam",
+    parentEmail: "",
+    address: "",
+  });
+
   const fetchClasses = () => {
     fetchGet(
       "/api/classes",
-      (data) => {
-        const validClasses = Array.isArray(data) ? data : [];
-        setClasses(validClasses);
-      },
-      (err) => {
-        console.error("Lỗi tải lớp học:", err);
-        toast.error("Không thể tải danh sách lớp học");
-      }
+      (data) => setClasses(Array.isArray(data) ? data : []),
+      () => toast.error("Không tải được danh sách lớp")
     );
   };
 
   useEffect(() => {
     if (open) {
       fetchClasses();
+      if (classId) setSelectedClassId(classId);
       setTimeout(() => nameRef.current?.focus(), 150);
     }
-  }, [open]);
+  }, [open, classId]);
 
-  // Reset form khi mở
   useEffect(() => {
     if (open) {
-      setFormData({
-        name: "",
-        email: "",
-        phoneNumber: "",
-        dateOfBirth: "",
-        gender: "",
-        address: "",
-        classId: "",
-        enrollDate: new Date().toISOString().split("T")[0],
+      setForm({
+        studentName: "",
+        studentDateOfBirth: "",
+        studentEnrollDate: new Date().toISOString().split("T")[0],
+        gender: "Nam",
         parentName: "",
         parentPhone: "",
+        parentDateOfBirth: "",
+        parentGender: "Nam",
         parentEmail: "",
+        address: "",
       });
+      if (classId) setSelectedClassId(classId);
     }
-  }, [open]);
-
-  const handleCancel = () => {
-    onClose();
-  };
+  }, [open, classId]);
 
   const handleSave = async () => {
-    // Validate bắt buộc
-    if (!formData.name.trim()) {
-      toast.error("Họ tên học sinh không được để trống!");
-      return;
-    }
-    if (!formData.email.trim()) {
-      toast.error("Email không được để trống!");
-      return;
-    }
-    if (!formData.phoneNumber.trim()) {
-      toast.error("Số điện thoại không được để trống!");
-      return;
-    }
-    if (!formData.classId) {
-      toast.error("Vui lòng chọn lớp học!");
-      return;
-    }
+    // Validate
+    if (!form.studentName.trim()) return toast.error("Vui lòng nhập họ tên học sinh");
+    if (!form.studentDateOfBirth) return toast.error("Vui lòng chọn ngày sinh học sinh");
+    if (!selectedClassId) return toast.error("Vui lòng chọn lớp học");
+    if (!form.parentName.trim()) return toast.error("Vui lòng nhập tên phụ huynh");
+    if (!form.parentPhone.trim()) return toast.error("Vui lòng nhập số điện thoại phụ huynh");
 
     setLoading(true);
 
-    const payload = {
-      name: formData.name.trim(),
-      email: formData.email.trim(),
-      phoneNumber: formData.phoneNumber.trim(),
-      dateOfBirth: formData.dateOfBirth || null,
-      gender: formData.gender || null,
-      address: formData.address.trim() || null,
-      classId: formData.classId,
-      enrollDate: formData.enrollDate,
-      status: true,
-      // Phụ huynh (tùy chọn)
-      parent: formData.parentName.trim()
-        ? {
-            name: formData.parentName.trim(),
-            email: formData.parentEmail.trim() || null,
-            phoneNumber: formData.parentPhone.trim() || null,
+    const accountId = localStorage.getItem("accountId");
+          if (!accountId) {
+            toast.error("Phiên đăng nhập hết hạn");
+            setLoading(false);
+            return;
           }
-        : null,
-    };
+    const user = await new Promise((resolve, reject) => {
+            fetchGet(`/api/accounts/by-account/${accountId}`, resolve, reject, () => reject("exception"));
+          });
+    const schoolId = user.schoolId;
+
+    if (!schoolId) {
+      toast.error("Không xác định được trường học. Vui lòng chọn lại lớp.");
+      setLoading(false);
+      return;
+    }
+
+    // Chuẩn hóa ngày: YYYY-MM-DD → YYYY-MM-DDTHH:mm:ss
+    const formatDate = (dateStr) => (dateStr ? `${dateStr}T00:00:00` : null);
+
+    const payload = [
+      {
+        studentName: form.studentName.trim(),
+        studentDateOfBirth: formatDate(form.studentDateOfBirth),
+        studentEnrollDate: formatDate(form.studentEnrollDate),
+        gender: form.gender,
+        parentName: form.parentName.trim(),
+        parentPhone: form.parentPhone.trim(),
+        parentDateOfBirth: formatDate(form.parentDateOfBirth),
+        parentGender: form.parentGender,
+        parentEmail: form.parentEmail.trim() || null,
+        address: form.address.trim() || null,
+        schoolId: schoolId, // BẮT BUỘC theo API
+      },
+    ];
 
     fetchPost(
-      "/api/students",
+      `/api/classes/${selectedClassId}/add-students`,
       payload,
       (res) => {
-        if (res && (res.id || res.success || typeof res === "string")) {
+        if (res?.success || (res?.createdStudents && res.createdStudents.length > 0)) {
           toast.success("Thêm học sinh thành công!");
-          if (onSuccess) onSuccess();
-          handleCancel();
+          onSuccess?.(); // Gọi lại để reload danh sách
+          onClose();
         } else {
-          toast.error("Thêm thất bại: Phản hồi không hợp lệ");
+          toast.error(res?.message || "Thêm học sinh thất bại");
         }
       },
-      (error) => {
-        toast.error(error?.title || "Lỗi khi thêm học sinh");
+      (err) => {
+        toast.error(err?.title || "Lỗi khi thêm học sinh");
       },
-      () => setLoading(false)
+      () => setLoading(false) // Luôn chạy khi hoàn tất
     );
   };
 
   return (
-    <Dialog
-      open={open}
-      onClose={(event, reason) => {
-        if (reason !== "backdropClick" && reason !== "escapeKeyDown") {
-          onClose();
-        }
-      }}
-      maxWidth="md"
-      fullWidth
-      className="add-student-dialog"
-    >
-      <DialogTitle className="dialog-title">
+    <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth className="add-student-dialog">
+      {/* Header */}
+      <DialogTitle>
         <Box display="flex" alignItems="center" justifyContent="space-between">
-          <Box display="flex" alignItems="center" gap={1.5}>
-            <PersonIcon color="primary" fontSize="large" />
+          <Box display="flex" alignItems="center" gap={2}>
+            <SchoolIcon color="primary" fontSize="large" />
             <Typography variant="h6" fontWeight={600}>
-              Thêm học sinh mới
+              Thêm học sinh vào lớp
             </Typography>
           </Box>
-          <IconButton size="small" onClick={handleCancel}>
+          <IconButton onClick={onClose}>
             <CloseIcon />
           </IconButton>
         </Box>
       </DialogTitle>
 
-      <Divider />
-
-      <DialogContent className="dialog-content">
-        <Grid container spacing={3}>
-          {/* === THÔNG TIN CƠ BẢN === */}
-          <Grid item xs={12} md={6}>
-            <Box display="flex" alignItems="center" gap={1} mb={1}>
-              <PersonIcon fontSize="small" color="action" />
-              <Typography variant="subtitle1" color="textSecondary" fontWeight={500}>
-                Họ và tên *
-              </Typography>
-            </Box>
-            <TextField
-              inputRef={nameRef}
-              fullWidth
-              value={formData.name}
-              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-              variant="outlined"
-              placeholder="Nguyễn Văn A"
-              size="medium"
-            />
-          </Grid>
-
-          <Grid item xs={12} md={6}>
-            <Box display="flex" alignItems="center" gap={1} mb={1}>
-              <EmailIcon fontSize="small" color="action" />
-              <Typography variant="subtitle1" color="textSecondary" fontWeight={500}>
-                Email *
-              </Typography>
-            </Box>
-            <TextField
-              fullWidth
-              value={formData.email}
-              onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-              variant="outlined"
-              placeholder="nguyenvana@school.edu.vn"
-              size="medium"
-            />
-          </Grid>
-
-          <Grid item xs={12} md={6}>
-            <Box display="flex" alignItems="center" gap={1} mb={1}>
-              <PhoneIcon fontSize="small" color="action" />
-              <Typography variant="subtitle1" color="textSecondary" fontWeight={500}>
-                Số điện thoại *
-              </Typography>
-            </Box>
-            <TextField
-              fullWidth
-              value={formData.phoneNumber}
-              onChange={(e) => setFormData({ ...formData, phoneNumber: e.target.value })}
-              variant="outlined"
-              placeholder="0901234567"
-              size="medium"
-            />
-          </Grid>
-
-          <Grid item xs={12} md={6}>
-            <Box display="flex" alignItems="center" gap={1} mb={1}>
-              <CakeIcon fontSize="small" color="action" />
-              <Typography variant="subtitle1" color="textSecondary" fontWeight={500}>
-                Ngày sinh
-              </Typography>
-            </Box>
-            <TextField
-              fullWidth
-              type="date"
-              value={formData.dateOfBirth}
-              onChange={(e) => setFormData({ ...formData, dateOfBirth: e.target.value })}
-              variant="outlined"
-              size="medium"
-              InputLabelProps={{ shrink: true }}
-            />
-          </Grid>
-
-          <Grid item xs={12} md={6}>
-            <Box display="flex" alignItems="center" gap={1} mb={1}>
-              <WcIcon fontSize="small" color="action" />
-              <Typography variant="subtitle1" color="textSecondary" fontWeight={500}>
-                Giới tính
-              </Typography>
-            </Box>
-            <FormControl fullWidth variant="outlined" size="medium">
-              <Select
-                value={formData.gender}
-                onChange={(e) => setFormData({ ...formData, gender: e.target.value })}
-                displayEmpty
-              >
-                <MenuItem value="" disabled>
-                  Chọn giới tính
+      <DialogContent dividers sx={{ pt: 4, pb: 4, backgroundColor: "#f9fafb" }}>
+        {/* Chọn lớp học */}
+        <Box mb={4}>
+          <FormControl fullWidth>
+            <InputLabel id="class-select-label">Lớp học</InputLabel>
+            <Select
+              labelId="class-select-label"
+              value={selectedClassId}
+              label="Lớp học"
+              onChange={(e) => setSelectedClassId(e.target.value)}
+            >
+              {classes.map((c) => (
+                <MenuItem key={c.id} value={c.id}>
+                  {c.className}
                 </MenuItem>
-                <MenuItem value="Nam">Nam</MenuItem>
-                <MenuItem value="Nữ">Nữ</MenuItem>
-                <MenuItem value="Khác">Khác</MenuItem>
-              </Select>
-            </FormControl>
-          </Grid>
+              ))}
+            </Select>
+          </FormControl>
+        </Box>
 
-          <Grid item xs={12} md={6}>
-            <Box display="flex" alignItems="center" gap={1} mb={1}>
-              <SchoolIcon fontSize="small" color="action" />
-              <Typography variant="subtitle1" color="textSecondary" fontWeight={500}>
-                Lớp học *
-              </Typography>
-            </Box>
-            <FormControl fullWidth variant="outlined" size="medium">
-              <Select
-                value={formData.classId}
-                onChange={(e) => setFormData({ ...formData, classId: e.target.value })}
-                displayEmpty
-              >
-                <MenuItem value="" disabled>
-                  Chọn lớp học
-                </MenuItem>
-                {classes.map((cls) => (
-                  <MenuItem key={cls.id} value={cls.id}>
-                    {cls.className}
-                  </MenuItem>
-                ))}
-              </Select>
-            </FormControl>
-          </Grid>
+        {/* === THÔNG TIN HỌC SINH === */}
+        <Box className="student-info-section" mb={4}>
+          <Typography className="section-title" gutterBottom>
+            <PersonIcon sx={{ fontSize: 28 }} /> Thông tin học sinh
+          </Typography>
 
-          <Grid item xs={12}>
-            <Box display="flex" alignItems="center" gap={1} mb={1}>
-              <LocationOnIcon fontSize="small" color="action" />
-              <Typography variant="subtitle1" color="textSecondary" fontWeight={500}>
-                Địa chỉ
-              </Typography>
-            </Box>
-            <TextField
-              fullWidth
-              value={formData.address}
-              onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-              variant="outlined"
-              multiline
-              rows={2}
-              placeholder="Số nhà, đường, phường/xã..."
-              size="medium"
-            />
-          </Grid>
+          <Grid container spacing={3}>
+            <Grid item xs={12} md={6}>
+              <TextField
+                inputRef={nameRef}
+                fullWidth
+                label="Họ tên học sinh"
+                value={form.studentName}
+                onChange={(e) => setForm({ ...form, studentName: e.target.value })}
+                InputProps={{ startAdornment: <PersonIcon color="action" sx={{ mr: 1 }} /> }}
+              />
+            </Grid>
 
-          {/* === PHỤ HUYNH (TÙY CHỌN) === */}
-          <Grid item xs={12}>
-            <Divider sx={{ my: 2 }}>
-              <Typography variant="overline" color="text.secondary">
-                Thông tin phụ huynh (không bắt buộc)
-              </Typography>
-            </Divider>
-          </Grid>
+            <Grid item xs={12} md={6}>
+              <TextField
+                fullWidth
+                label="Ngày sinh học sinh"
+                type="date"
+                value={form.studentDateOfBirth}
+                onChange={(e) => setForm({ ...form, studentDateOfBirth: e.target.value })}
+                InputLabelProps={{ shrink: true }}
+                InputProps={{ startAdornment: <CakeIcon color="action" sx={{ mr: 1 }} /> }}
+              />
+            </Grid>
 
-          <Grid item xs={12} md={4}>
-            <Box display="flex" alignItems="center" gap={1} mb={1}>
-              <PeopleIcon fontSize="small" color="action" />
-              <Typography variant="subtitle1" color="textSecondary" fontWeight={500}>
-                Tên phụ huynh
-              </Typography>
-            </Box>
-            <TextField
-              fullWidth
-              value={formData.parentName}
-              onChange={(e) => setFormData({ ...formData, parentName: e.target.value })}
-              variant="outlined"
-              placeholder="Nguyễn Thị B"
-              size="medium"
-            />
-          </Grid>
+            <Grid item xs={12} md={6}>
+              <TextField
+                fullWidth
+                label="Ngày nhập học"
+                type="date"
+                value={form.studentEnrollDate}
+                onChange={(e) => setForm({ ...form, studentEnrollDate: e.target.value })}
+                InputLabelProps={{ shrink: true }}
+                InputProps={{ startAdornment: <CalendarTodayIcon color="action" sx={{ mr: 1 }} /> }}
+              />
+            </Grid>
 
-          <Grid item xs={12} md={4}>
-            <Box display="flex" alignItems="center" gap={1} mb={1}>
-              <PhoneIcon fontSize="small" color="action" />
-              <Typography variant="subtitle1" color="textSecondary" fontWeight={500}>
-                SĐT phụ huynh
-              </Typography>
-            </Box>
-            <TextField
-              fullWidth
-              value={formData.parentPhone}
-              onChange={(e) => setFormData({ ...formData, parentPhone: e.target.value })}
-              variant="outlined"
-              placeholder="0908765432"
-              size="medium"
-            />
+            <Grid item xs={12} md={6}>
+              <FormControl fullWidth>
+                <InputLabel>Giới tính học sinh</InputLabel>
+                <Select
+                  value={form.gender}
+                  label="Giới tính học sinh"
+                  onChange={(e) => setForm({ ...form, gender: e.target.value })}
+                >
+                  <MenuItem value="Nam">Nam</MenuItem>
+                  <MenuItem value="Nữ">Nữ</MenuItem>
+                </Select>
+              </FormControl>
+            </Grid>
           </Grid>
+        </Box>
 
-          <Grid item xs={12} md={4}>
-            <Box display="flex" alignItems="center" gap={1} mb={1}>
-              <EmailIcon fontSize="small" color="action" />
-              <Typography variant="subtitle1" color="textSecondary" fontWeight={500}>
-                Email phụ huynh
-              </Typography>
-            </Box>
-            <TextField
-              fullWidth
-              value={formData.parentEmail}
-              onChange={(e) => setFormData({ ...formData, parentEmail: e.target.value })}
-              variant="outlined"
-              placeholder="phuhuynh@domain.com"
-              size="medium"
-            />
+        {/* === THÔNG TIN PHỤ HUYNH === */}
+        <Box className="parent-info-section">
+          <Typography className="section-title" gutterBottom>
+            <WcIcon sx={{ fontSize: 28 }} /> Thông tin phụ huynh
+          </Typography>
+
+          <Grid container spacing={3}>
+            <Grid item xs={12} md={6}>
+              <TextField
+                fullWidth
+                label="Họ tên phụ huynh"
+                value={form.parentName}
+                onChange={(e) => setForm({ ...form, parentName: e.target.value })}
+                InputProps={{ startAdornment: <PersonIcon color="action" sx={{ mr: 1 }} /> }}
+              />
+            </Grid>
+
+            <Grid item xs={12} md={6}>
+              <TextField
+                fullWidth
+                label="Số điện thoại phụ huynh"
+                value={form.parentPhone}
+                onChange={(e) => setForm({ ...form, parentPhone: e.target.value })}
+                InputProps={{ startAdornment: <PhoneIcon color="action" sx={{ mr: 1 }} /> }}
+              />
+            </Grid>
+
+            <Grid item xs={12} md={6}>
+              <TextField
+                fullWidth
+                label="Email phụ huynh (tùy chọn)"
+                value={form.parentEmail}
+                onChange={(e) => setForm({ ...form, parentEmail: e.target.value })}
+                InputProps={{ startAdornment: <EmailIcon color="action" sx={{ mr: 1 }} /> }}
+              />
+            </Grid>
+
+            <Grid item xs={12} md={6}>
+              <TextField
+                fullWidth
+                label="Ngày sinh phụ huynh (tùy chọn)"
+                type="date"
+                value={form.parentDateOfBirth}
+                onChange={(e) => setForm({ ...form, parentDateOfBirth: e.target.value })}
+                InputLabelProps={{ shrink: true }}
+                InputProps={{ startAdornment: <CakeIcon color="action" sx={{ mr: 1 }} /> }}
+              />
+            </Grid>
+
+            <Grid item xs={12} md={6}>
+              <FormControl fullWidth>
+                <InputLabel>Giới tính phụ huynh</InputLabel>
+                <Select
+                  value={form.parentGender}
+                  label="Giới tính phụ huynh"
+                  onChange={(e) => setForm({ ...form, parentGender: e.target.value })}
+                >
+                  <MenuItem value="Nam">Nam</MenuItem>
+                  <MenuItem value="Nữ">Nữ</MenuItem>
+                </Select>
+              </FormControl>
+            </Grid>
+
+            <Grid item xs={12}>
+              <TextField
+                fullWidth
+                label="Địa chỉ"
+                value={form.address}
+                onChange={(e) => setForm({ ...form, address: e.target.value })}
+                multiline
+                rows={2}
+                InputProps={{
+                  startAdornment: (
+                    <LocationOnIcon color="action" sx={{ mr: 1, alignSelf: "flex-start", mt: 1 }} />
+                  ),
+                }}
+              />
+            </Grid>
           </Grid>
-        </Grid>
+        </Box>
       </DialogContent>
 
-      <Divider />
-
-      <DialogActions sx={{ p: 3, justifyContent: "flex-end", gap: 2 }}>
+      {/* Nút hành động */}
+      <DialogActions sx={{ p: 3, backgroundColor: "#f8fafc", justifyContent: "flex-end", gap: 2 }}>
         <Button
           variant="outlined"
           startIcon={<CancelIcon />}
-          onClick={handleCancel}
+          onClick={onClose}
           size="large"
-          sx={{ minWidth: 120, borderRadius: "12px" }}
+          sx={{ borderRadius: 3, px: 4 }}
         >
           Hủy
         </Button>
         <Button
           variant="contained"
-          color="primary"
-          startIcon={loading ? <CircularProgress size={20} /> : <SaveIcon />}
+          startIcon={loading ? <CircularProgress size={20} color="inherit" /> : <SaveIcon />}
           onClick={handleSave}
           disabled={loading}
           size="large"
-          sx={{ minWidth: 140, borderRadius: "12px" }}
+          sx={{ borderRadius: 3, px: 5 }}
         >
           {loading ? "Đang thêm..." : "Thêm học sinh"}
         </Button>

@@ -12,6 +12,7 @@ import TeacherManagement from "../pages/Admin/TeacherManagement/TeacherManagemen
 
 // === TRANG AUTH ===
 import Login from "../pages/Other/Login/Login";
+import DepartmentManagement from "../pages/Admin/DepartmentManagement/DepartmentManagement.jsx";
 
 // === TRANG LỖI (tùy chọn) ===
 // import PageNotFound from "../pages/Error/PageNotFound";
@@ -35,7 +36,7 @@ export default function MainRoutes() {
             <Route path="school-management" element={<SchoolManagement />} />
             <Route path="class-management" element={<ClassManagement />} />
             <Route path="student-management" element={<StudentManagement />} />
-            <Route path="teacher-management" element={<TeacherManagement />} />
+            <Route path="teacher-management" element={<DepartmentManagement />} />
           </Route>
         </Route>
 
