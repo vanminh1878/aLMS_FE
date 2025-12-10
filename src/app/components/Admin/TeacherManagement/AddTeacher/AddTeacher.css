@@ -1,0 +1,69 @@
+/* src/components/Admin/TeacherManagement/AddTeacher/AddTeacher.css */
+
+.add-teacher-dialog .MuiPaper-root {
+  border-radius: 18px;
+  overflow: hidden;
+  box-shadow: 0 12px 50px rgba(0, 0, 0, 0.18);
+}
+
+.add-teacher-dialog .MuiDialogTitle-root {
+  padding: 28px 36px;
+  background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+  color: white !important;
+}
+
+.add-teacher-dialog .MuiDialogTitle-root .MuiTypography-root,
+.add-teacher-dialog .MuiDialogTitle-root .MuiSvgIcon-root {
+  color: white !important;
+}
+
+.add-teacher-dialog .MuiDialogContent-root {
+  padding: 36px 44px !important;
+  background-color: #fafbff;
+}
+
+.add-teacher-dialog .MuiTextField-root {
+  margin-bottom: 22px;
+}
+
+.add-teacher-dialog .MuiOutlinedInput-root {
+  border-radius: 14px;
+  background-color: white;
+  transition: all 0.3s ease;
+  font-size: 1.02rem;
+}
+
+.add-teacher-dialog .MuiOutlinedInput-root:hover .MuiOutlinedInput-notchedOutline {
+  border-color: #a78bfa;
+}
+
+.add-teacher-dialog .MuiOutlinedInput-root.Mui-focused .MuiOutlinedInput-notchedOutline {
+  border-color: #7c3aed;
+  border-width: 2px;
+  box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.15);
+}
+
+.add-teacher-dialog .MuiDialogActions-root {
+  padding: 24px 44px;
+  background-color: #f8fafc;
+  border-top: 1px solid #e2e8f0;
+  gap: 18px;
+}
+
+.add-teacher-dialog .MuiButton-root {
+  border-radius: 12px;
+  text-transform: none;
+  font-weight: 600;
+  padding: 11px 28px;
+  min-width: 120px;
+}
+
+.add-teacher-dialog .MuiButton-contained {
+  background: linear-gradient(45deg, #7c3aed, #a78bfa);
+  box-shadow: 0 4px 15px rgba(124, 58, 237, 0.3);
+}
+
+.add-teacher-dialog .MuiButton-contained:hover {
+  box-shadow: 0 8px 25px rgba(124, 58, 237, 0.4);
+  transform: translateY(-2px);
+}

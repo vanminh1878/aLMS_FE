@@ -9,6 +9,7 @@ import SchoolManagement from "../pages/Admin/SchoolManagement/SchoolManagement";
 import ClassManagement from "../pages/Admin/ClassManagement/ClassManagement";
 import StudentManagement from "../pages/Admin/StudentManagement/StudentManagement";
 import TeacherManagement from "../pages/Admin/TeacherManagement/TeacherManagement";
+import SubjectManagement from "../pages/Admin/SubjectManagement/SubjectManagement";
 
 // === TRANG AUTH ===
 import Login from "../pages/Other/Login/Login";
@@ -36,6 +37,7 @@ export default function MainRoutes() {
             <Route path="school-management" element={<SchoolManagement />} />
             <Route path="class-management" element={<ClassManagement />} />
             <Route path="student-management" element={<StudentManagement />} />
+            <Route path="subject-management" element={<SubjectManagement />} />
             <Route path="teacher-management" element={<DepartmentManagement />} />
           </Route>
         </Route>
