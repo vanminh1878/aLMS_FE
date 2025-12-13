@@ -31,7 +31,7 @@ export default function Navigation() {
     { name: "Giáo viên", path: "/admin/teacher-management", icon: <FaUserFriends className="fs-5 icon" /> },
     
     // Hệ thống
-    { name: "Phân quyền", path: "/admin/roles-permission-management", icon: <FaCog className="fs-5 icon" /> },
+    { name: "Phân quyền", path: "/admin/role-management", icon: <FaCog className="fs-5 icon" /> },
     { name: "Hành vi học tập", path: "/admin/behaviour-management", icon: <FaVideo className="fs-5 icon" /> },
   ];
 

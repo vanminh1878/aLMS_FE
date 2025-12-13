@@ -40,6 +40,7 @@ export default function SubjectDetailManagement() {
 	const [lessons, setLessons] = useState([]);
 	const [exercises, setExercises] = useState([]);
 	const [selectedLesson, setSelectedLesson] = useState(null);
+	const [selectedExercise, setSelectedExercise] = useState(null);
 	const [tabValue, setTabValue] = useState(0);
 	const [loadingContent, setLoadingContent] = useState(false);
 
@@ -146,6 +147,20 @@ export default function SubjectDetailManagement() {
 		setSearchContent("");
 	};
 
+	// Khi chọn bài tập -> set selectedExercise (null để quay về list)
+	const handleSelectExercise = (exercise) => {
+		if (!exercise) {
+			setSelectedExercise(null);
+			setTabValue(1);
+			setSearchContent("");
+			return;
+		}
+
+		setSelectedExercise(exercise);
+		setTabValue(1);
+		setSearchContent("");
+	};
+
 	const handleLessonAdded = () => {
 		loadTopicContent(selectedTopicId);
 	};
@@ -218,9 +233,11 @@ export default function SubjectDetailManagement() {
 					lessons={lessons}
 					exercises={exercises}
 					selectedLesson={selectedLesson}
+					selectedExercise={selectedExercise}
 					tabValue={tabValue}
 					onTabChange={setTabValue}
 					onSelectLesson={handleSelectLesson}
+					onSelectExercise={handleSelectExercise}
 					searchContent={searchContent}
 					onSearchContent={setSearchContent}
 					onOpenAddLesson={() => setOpenAddLesson(true)}

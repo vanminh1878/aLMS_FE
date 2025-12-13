@@ -14,6 +14,7 @@ import SubjectManagement from "../pages/Admin/SubjectManagement/SubjectManagemen
 // === TRANG AUTH ===
 import Login from "../pages/Other/Login/Login";
 import DepartmentManagement from "../pages/Admin/DepartmentManagement/DepartmentManagement.jsx";
+import RoleManagement from "../pages/Admin/RoleManagement/RoleManagement.jsx";
 
 // === TRANG LỖI (tùy chọn) ===
 // import PageNotFound from "../pages/Error/PageNotFound";
@@ -40,6 +41,7 @@ export default function MainRoutes() {
             <Route path="subject-management" element={<SubjectManagement />} />
             <Route path="/admin/subjects/:subjectId" element={<SubjectDetailManagement />} />
             <Route path="teacher-management" element={<DepartmentManagement />} />
+            <Route path="role-management" element={<RoleManagement />} />
           </Route>
         </Route>
 
