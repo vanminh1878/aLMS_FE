@@ -15,6 +15,8 @@ import {
   FormControl,
   InputLabel,
   CircularProgress,
+  Tabs,
+  Tab,
 } from "@mui/material";
 import { DataGrid } from "@mui/x-data-grid";
 import SearchIcon from "@mui/icons-material/Search";
@@ -25,6 +27,7 @@ import { toast } from "react-toastify";
 
 import { fetchGet, fetchPut } from "../../../lib/httpHandler.js";
 import { showYesNoMessageBox } from "../../../components/MessageBox/YesNoMessageBox/showYesNoMessgeBox.js";
+import PersonAddIcon from '@mui/icons-material/PersonAdd';
 
 export default function RoleManagement() {
   const [selectedSchoolId, setSelectedSchoolId] = useState("");
@@ -39,6 +42,10 @@ export default function RoleManagement() {
   const [classes, setClasses] = useState([]);
   const [selectedClassId, setSelectedClassId] = useState("");
   const [classesLoading, setClassesLoading] = useState(false);
+  const [tabIndex, setTabIndex] = useState(0);
+  const [gradeFilter, setGradeFilter] = useState("all");
+  const [openAddHomeroom, setOpenAddHomeroom] = useState(false);
+  const [classForAdd, setClassForAdd] = useState(null);
 
   const fetchDepartments = useCallback((schoolId) => {
     if (!schoolId) return setDepartments([]);
@@ -80,6 +87,9 @@ export default function RoleManagement() {
               specialization: p.specialization || "",
               accountId: user.account?.id || p.userId,
               status: user.account?.status ?? true,
+              // keep raw profile for homeroom/class lookup (may contain role/classId)
+              rawProfile: p,
+              userObj: user,
             };
           });
 
@@ -131,6 +141,8 @@ export default function RoleManagement() {
               specialization: p.specialization || "",
               accountId: user.account?.id || p.userId,
               status: user.account?.status ?? true,
+              rawProfile: p,
+              userObj: user,
             };
           });
 
@@ -147,6 +159,31 @@ export default function RoleManagement() {
         toast.error("Lỗi tải giáo viên theo bộ môn");
         setTeachers([]);
         setLoading(false);
+      }
+    );
+  }, []);
+
+  const fetchClassesBySchool = useCallback((schoolId) => {
+    if (!schoolId) return setClasses([]);
+    setClassesLoading(true);
+    fetchGet(
+      `/api/classes/by-school/${schoolId}`,
+      (data) => {
+         console.log("Classes API response:", data);
+        const list = Array.isArray(data) ? data : [];
+        setClasses(
+          list.map((cls) => ({
+            ...cls,
+            className: cls.className || cls.name || cls.code,
+            numStudent: cls.studentCount || cls.numStudent || 0,
+            isDelete: typeof cls.isDelete !== 'undefined' ? cls.isDelete : (cls.isDeleted || false),
+          }))
+        );
+        setClassesLoading(false);
+      },
+      () => {
+        setClasses([]);
+        setClassesLoading(false);
       }
     );
   }, []);
@@ -191,6 +228,15 @@ export default function RoleManagement() {
     if (selectedDepartmentId) fetchTeachersByDepartment(selectedDepartmentId);
     else if (selectedSchoolId) fetchTeachersBySchool(selectedSchoolId);
   }, [selectedDepartmentId, selectedSchoolId, fetchTeachersByDepartment, fetchTeachersBySchool]);
+
+  // load classes when switching to homeroom tab or when school changes
+  useEffect(() => {
+    if (tabIndex === 1 && selectedSchoolId) {
+      fetchClassesBySchool(selectedSchoolId);
+      // ensure teachers are loaded for selection
+      fetchTeachersBySchool(selectedSchoolId);
+    }
+  }, [tabIndex, selectedSchoolId, fetchClassesBySchool, fetchTeachersBySchool]);
 
   const filteredTeachers = useMemo(() => {
     if (!searchTerm.trim()) return teachers;
@@ -270,15 +316,6 @@ export default function RoleManagement() {
           >
             <StarIcon />
           </IconButton>
-
-          <IconButton
-            size="small"
-            color="secondary"
-            title="Gán giáo viên chủ nhiệm"
-            onClick={() => openHomeroomDialog(params.row)}
-          >
-            <ClassIcon />
-          </IconButton>
         </Box>
       ),
     },
@@ -290,89 +327,213 @@ export default function RoleManagement() {
         Quản lý Vai trò Giáo viên
       </Typography>
 
-      <Box sx={{ display: "flex", gap: 2, alignItems: "center", mb: 3, flexWrap: "wrap" }}>
-        <TextField
-          placeholder="Tìm kiếm tên hoặc email..."
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          size="small"
-          sx={{ width: 360 }}
-          InputProps={{
-            startAdornment: (
-              <InputAdornment position="start">
-                <SearchIcon />
-              </InputAdornment>
-            ),
-          }}
-        />
+      <Tabs value={tabIndex} onChange={(e, v) => setTabIndex(v)} sx={{ mb: 2 }}>
+        <Tab label="Quản lý Trưởng bộ môn" />
+        <Tab label="Quản lý Giáo viên chủ nhiệm" />
+      </Tabs>
 
-        <FormControl size="small" sx={{ minWidth: 240 }}>
-          <InputLabel>Bộ môn</InputLabel>
-          <Select
-            value={selectedDepartmentId}
-            label="Bộ môn"
-            onChange={(e) => setSelectedDepartmentId(e.target.value)}
-          >
-            <MenuItem value="">Tất cả</MenuItem>
-            {departments.map((d) => (
-              <MenuItem key={d.id} value={d.id}>
-                {d.departmentName || d.name}
-              </MenuItem>
-            ))}
-          </Select>
-        </FormControl>
-      </Box>
+      {/* Left tab: existing trưởng bộ môn management (search + dept select + grid) */}
+      {tabIndex === 0 && (
+        <>
+          <Box sx={{ display: "flex", gap: 2, alignItems: "center", mb: 3, flexWrap: "wrap" }}>
+            <TextField
+              placeholder="Tìm kiếm tên hoặc email..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              size="small"
+              sx={{ width: 360 }}
+              InputProps={{
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <SearchIcon />
+                  </InputAdornment>
+                ),
+              }}
+            />
 
-      <Box sx={{ backgroundColor: "white", borderRadius: 2, p: 2 }}>
-        {loading ? (
-          <Box sx={{ textAlign: "center", py: 6 }}>
-            <CircularProgress />
-            <Typography mt={2}>Đang tải danh sách...</Typography>
-          </Box>
-        ) : (
-          <DataGrid
-            rows={filteredTeachers}
-            columns={columns}
-            getRowId={(row) => row.id}
-            pageSizeOptions={[10, 20, 50]}
-            disableRowSelectionOnClick
-            autoHeight
-            localeText={{ noRowsLabel: "Không có giáo viên nào" }}
-          />
-        )}
-      </Box>
-
-      <Dialog open={openClassDialog} onClose={() => setOpenClassDialog(false)} maxWidth="sm" fullWidth>
-        <DialogTitle>Chọn lớp chủ nhiệm</DialogTitle>
-        <DialogContent>
-          {classesLoading ? (
-            <Box sx={{ textAlign: "center", py: 3 }}>
-              <CircularProgress />
-            </Box>
-          ) : (
-            <FormControl fullWidth>
-              <InputLabel>Lớp</InputLabel>
-              <Select value={selectedClassId} label="Lớp" onChange={(e) => setSelectedClassId(e.target.value)}>
-                {classes.length === 0 ? (
-                  <MenuItem value="">(Không có lớp)</MenuItem>
-                ) : (
-                  classes.map((c) => (
-                    <MenuItem key={c.id} value={c.id}>
-                      {c.name || c.code || c.id}
-                    </MenuItem>
-                  ))
-                )}
+            <FormControl size="small" sx={{ minWidth: 240 }}>
+              <InputLabel>Bộ môn</InputLabel>
+              <Select
+                value={selectedDepartmentId}
+                label="Bộ môn"
+                onChange={(e) => setSelectedDepartmentId(e.target.value)}
+              >
+                <MenuItem value="">Tất cả</MenuItem>
+                {departments.map((d) => (
+                  <MenuItem key={d.id} value={d.id}>
+                    {d.departmentName || d.name}
+                  </MenuItem>
+                ))}
               </Select>
             </FormControl>
-          )}
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setOpenClassDialog(false)}>Hủy</Button>
-          <Button variant="contained" onClick={confirmAssignHomeroom} disabled={!selectedClassId}>
-            Xác nhận
-          </Button>
-        </DialogActions>
-      </Dialog>
+          </Box>
+
+          <Box sx={{ backgroundColor: "white", borderRadius: 2, p: 2 }}>
+            {loading ? (
+              <Box sx={{ textAlign: "center", py: 6 }}>
+                <CircularProgress />
+                <Typography mt={2}>Đang tải danh sách...</Typography>
+              </Box>
+            ) : (
+              <DataGrid
+                rows={filteredTeachers}
+                columns={columns}
+                getRowId={(row) => row.id}
+                pageSizeOptions={[10, 20, 50]}
+                disableRowSelectionOnClick
+                autoHeight
+                localeText={{ noRowsLabel: "Không có giáo viên nào" }}
+              />
+            )}
+          </Box>
+        </>
+      )}
+
+      {/* Right tab: homeroom management */}
+      {tabIndex === 1 && (
+        <>
+          <Box sx={{ display: "flex", gap: 2, alignItems: "center", mb: 3, flexWrap: "wrap" }}>
+            <TextField
+              placeholder="Tìm kiếm lớp..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              size="small"
+              sx={{ width: 360 }}
+              InputProps={{
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <SearchIcon />
+                  </InputAdornment>
+                ),
+              }}
+            />
+
+            <FormControl size="small" sx={{ minWidth: 200 }}>
+              <InputLabel>Khối lớp</InputLabel>
+              <Select value={gradeFilter} label="Khối lớp" onChange={(e) => setGradeFilter(e.target.value)}>
+                <MenuItem value="all">Tất cả</MenuItem>
+                <MenuItem value="1">Lớp 1</MenuItem>
+                <MenuItem value="2">Lớp 2</MenuItem>
+                <MenuItem value="3">Lớp 3</MenuItem>
+                <MenuItem value="4">Lớp 4</MenuItem>
+                <MenuItem value="5">Lớp 5</MenuItem>
+              </Select>
+            </FormControl>
+          </Box>
+
+          <Box sx={{ backgroundColor: "white", borderRadius: 2, p: 2 }}>
+            {classesLoading ? (
+              <Box sx={{ textAlign: "center", py: 6 }}>
+                <CircularProgress />
+                <Typography mt={2}>Đang tải danh sách lớp...</Typography>
+              </Box>
+            ) : (
+              <DataGrid
+                rows={classes.filter((c) => {
+                  if (gradeFilter !== "all" && `${c.grade}` !== `${gradeFilter}`) return false;
+                  if (searchTerm.trim() && !(c.className || c.name || "").toLowerCase().includes(searchTerm.toLowerCase())) return false;
+                  return true;
+                })}
+                columns={[
+                  { field: "className", headerName: "Lớp", flex: 1, minWidth: 200, renderCell: (params) => {
+                      const row = params?.row ?? params;
+                      return <span>{row?.className || row?.name || row?.code || "-"}</span>;
+                    }
+                  },
+                  {
+                    field: "homeroom",
+                    headerName: "Giáo viên chủ nhiệm",
+                    flex: 1,
+                    minWidth: 220,
+                    valueGetter: (params) => {
+                      const cls = params?.row ?? params;
+                      // try find teacher with rawProfile.classId or rawProfile.classIdAssigned or role
+                      const t = teachers.find((tt) => {
+                        const rp = tt.rawProfile || {};
+                        if (!rp) return false;
+                        if (!cls) return false;
+                        if (rp.classId && `${rp.classId}` === `${cls.id}`) return true;
+                        if (rp.assignedClassId && `${rp.assignedClassId}` === `${cls.id}`) return true;
+                        if (rp.role === "homeroom_teacher" && rp.classId && `${rp.classId}` === `${cls.id}`) return true;
+                        return false;
+                      });
+                      return t ? t.fullName : "-";
+                    },
+                  },
+                  {
+                    field: "actions",
+                    headerName: "Thao tác",
+                    width: 140,
+                    sortable: false,
+                    renderCell: (params) => (
+                      <Box display="flex" gap={0.5}>
+                        <IconButton size="small" color="primary" title="Thêm/Chọn GVCN" onClick={() => {
+                          setClassForAdd(params.row);
+                          setOpenAddHomeroom(true);
+                        }}>
+                          <PersonAddIcon />
+                        </IconButton>
+                      </Box>
+                    ),
+                  },
+                ]}
+                getRowId={(r) => r.id}
+                pageSizeOptions={[10, 20, 50]}
+                disableRowSelectionOnClick
+                autoHeight
+                localeText={{ noRowsLabel: "Không có lớp" }}
+              />
+            )}
+          </Box>
+
+          {/* Dialog: add homeroom teacher for a class */}
+          <Dialog open={openAddHomeroom} onClose={() => setOpenAddHomeroom(false)} maxWidth="sm" fullWidth>
+            <DialogTitle>Chọn giáo viên chủ nhiệm cho lớp {classForAdd ? (classForAdd.className || classForAdd.name) : ""}</DialogTitle>
+            <DialogContent>
+              {loading ? (
+                <Box sx={{ textAlign: "center", py: 3 }}>
+                  <CircularProgress />
+                </Box>
+              ) : (
+                <FormControl fullWidth sx={{ mt: 1 }}>
+                  <InputLabel>Giáo viên</InputLabel>
+                  <Select
+                    value={selectedTeacher ? selectedTeacher.id : ""}
+                    label="Giáo viên"
+                    onChange={(e) => {
+                      const t = teachers.find((x) => x.id === e.target.value);
+                      setSelectedTeacher(t || null);
+                    }}
+                  >
+                    <MenuItem value="">Chọn giáo viên</MenuItem>
+                    {teachers.map((t) => (
+                      <MenuItem key={t.id} value={t.id}>
+                        {t.fullName} {t.email ? ` - ${t.email}` : ""}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+              )}
+            </DialogContent>
+            <DialogActions>
+              <Button onClick={() => setOpenAddHomeroom(false)}>Hủy</Button>
+              <Button variant="contained" disabled={!selectedTeacher || !classForAdd} onClick={async () => {
+                if (!selectedTeacher || !classForAdd) return;
+                await handleAssignRole(selectedTeacher.id, "homeroom_teacher", { classId: classForAdd.id });
+                setOpenAddHomeroom(false);
+                setSelectedTeacher(null);
+                // refresh teachers and classes
+                if (selectedSchoolId) {
+                  fetchTeachersBySchool(selectedSchoolId);
+                  fetchClassesBySchool(selectedSchoolId);
+                }
+              }}>
+                Xác nhận
+              </Button>
+            </DialogActions>
+          </Dialog>
+        </>
+      )}
     </Box>
   );
 }
