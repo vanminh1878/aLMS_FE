@@ -88,7 +88,7 @@ const DetailSchool = ({ open, onClose, school, onUpdateSuccess }) => {
       "/api/schools",
       payload,
       (res) => {
-        if (res.success) {
+        if (res.success || res.id) {
           toast.success("Cập nhật trường học thành công!");
 
           const updatedSchool = {
@@ -100,14 +100,16 @@ const DetailSchool = ({ open, onClose, school, onUpdateSuccess }) => {
 
           if (onUpdateSuccess) onUpdateSuccess(updatedSchool);
           setIsEditMode(false);
+          setLoading(false);
         } else {
           toast.error(res.message || "Cập nhật thất bại");
+          setLoading(false);
         }
       },
       (error) => {
         toast.error(error.title || "Lỗi khi cập nhật trường học");
-      },
-      () => setLoading(false)
+        setLoading(false);
+      }
     );
   };
 

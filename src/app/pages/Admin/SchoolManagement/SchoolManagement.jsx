@@ -79,15 +79,19 @@ export default function SchoolManagement() {
     );
     if (!confirm) return;
 
-    const payload = schools
-      .find((s) => s.id === schoolId)
-      .let((s) => ({
-        id: schoolId,
-        name: s.name,
-        email: s.email,
-        address: s.address,
-        status: !currentStatus,
-      }));
+    const found = schools.find((s) => s.id === schoolId);
+    if (!found) {
+      toast.error("Không tìm thấy trường để cập nhật");
+      return;
+    }
+
+    const payload = {
+      id: schoolId,
+      name: found.name,
+      email: found.email,
+      address: found.address,
+      status: !currentStatus,
+    };
 
     fetchPut(
       "/api/schools",
