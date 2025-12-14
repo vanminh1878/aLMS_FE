@@ -1,0 +1,43 @@
+/* src/components/Admin/StudentManagement/DetailStudent/DetailStudent.css */
+
+.detail-student-dialog .dialog-title {
+  padding: 28px;
+  background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+  color: white;
+  text-align: center;
+}
+
+.detail-student-dialog .dialog-title .MuiTypography-root,
+.detail-student-dialog .dialog-title .MuiSvgIcon-root {
+  color: white !important;
+}
+
+.detail-student-dialog .dialog-content {
+  padding: 40px 48px !important;
+}
+
+.detail-student-dialog .MuiDialogActions-root {
+  background-color: #f1f5f9;
+  border-top: 1px solid #e2e8f0;
+}
+
+.detail-student-dialog .MuiPaper-root {
+  border-radius: 20px;
+  overflow: hidden;
+  box-shadow: 0 15px 50px rgba(0, 0, 0, 0.18);
+}
+
+/* Typography cho nội dung chính */
+.detail-student-dialog .MuiTypography-h6 {
+  font-weight: 600 !important;
+}
+
+/* Chip giới tính */
+.detail-student-dialog .MuiChip-root {
+  pointer-events: none;
+}
+
+/* Khối trạng thái */
+.detail-student-dialog .MuiBox-root[bgcolor="#f8fafc"] {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}

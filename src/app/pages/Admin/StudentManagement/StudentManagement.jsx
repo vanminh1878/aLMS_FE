@@ -23,6 +23,7 @@ import BlockIcon from "@mui/icons-material/Block";
 import CheckCircleIcon from "@mui/icons-material/CheckCircle";
 
 import AddStudent from "../../../components/Admin/StudentManagement/AddStudent/AddStudent.jsx";
+import DetailStudent from "../../../components/Admin/StudentManagement/DetailStudent/DetailStudent.jsx";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 
@@ -259,34 +260,14 @@ const fetchStudents = useCallback(async () => {
         }}
       />
 
-      <Dialog open={openDetail} onClose={handleCloseDetail} maxWidth="sm" fullWidth>
-        <DialogTitle>Chi tiết học sinh</DialogTitle>
-        <DialogContent dividers>
-          {selectedStudent && (
-            <>
-              <Typography><strong>Họ tên:</strong> {selectedStudent.studentName}</Typography>
-              <Typography><strong>Tên đăng nhập:</strong> {selectedStudent.username}</Typography>
-              <Typography><strong>Giới tính:</strong> {selectedStudent.gender}</Typography>
-              <Typography><strong>Ngày sinh:</strong> {selectedStudent.dateOfBirth}</Typography>
-              <Typography><strong>Ngày nhập học:</strong> {selectedStudent.enrollDate}</Typography>
-              <Typography><strong>Địa chỉ:</strong> {selectedStudent.address}</Typography>
-              <Typography>
-                <strong>Trạng thái:</strong>{" "}
-                <Chip
-                  size="small"
-                  label={selectedStudent.status ? "Hoạt động" : "Bị khóa"}
-                  color={selectedStudent.status ? "success" : "error"}
-                />
-              </Typography>
-            </>
-          )}
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={handleCloseDetail} variant="outlined">
-            Đóng
-          </Button>
-        </DialogActions>
-      </Dialog>
+        <DetailStudent
+  open={openDetail}
+  onClose={handleCloseDetail}
+  student={selectedStudent}
+  onUpdateSuccess={() => {
+    fetchStudents(); 
+  }}
+/>
     </Box>
   );
 }
