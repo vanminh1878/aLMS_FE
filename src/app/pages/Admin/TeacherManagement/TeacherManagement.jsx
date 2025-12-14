@@ -1,3 +1,4 @@
+// src/components/Admin/TeacherManagement/TeacherManagement.jsx
 import React, { useEffect, useState, useMemo, useCallback } from "react";
 import {
   Box,
@@ -9,10 +10,6 @@ import {
   Chip,
   Tooltip,
   IconButton,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
 } from "@mui/material";
 import { DataGrid } from "@mui/x-data-grid";
 import SearchIcon from "@mui/icons-material/Search";
@@ -22,9 +19,11 @@ import BlockIcon from "@mui/icons-material/Block";
 import CheckCircleIcon from "@mui/icons-material/CheckCircle";
 
 import AddTeacher from "../../../components/Admin/TeacherManagement/AddTeacher/AddTeacher.jsx";
-import { fetchGet, fetchPut } from "../../../lib/httpHandler.js";
-import { toast } from "react-toastify";
+import DetailTeacher from "../../../components/Admin/TeacherManagement/DetailTeacher/DetailTeacher.jsx";
+import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
+
+import { fetchGet, fetchPut } from "../../../lib/httpHandler.js";
 import { showYesNoMessageBox } from "../../../components/MessageBox/YesNoMessageBox/showYesNoMessgeBox.js";
 import "./TeacherManagement.css";
 
@@ -38,7 +37,7 @@ export default function TeacherManagement({ predefinedDepartmentId }) {
 
   const departmentId = predefinedDepartmentId;
 
-  const fetchTeacherProfiles = useCallback(async () => {
+  const fetchTeachers = useCallback(async () => {
     if (!departmentId) {
       setTeachers([]);
       setLoading(false);
@@ -47,46 +46,71 @@ export default function TeacherManagement({ predefinedDepartmentId }) {
 
     setLoading(true);
     try {
-      const profiles = await new Promise((resolve, reject) =>
-        fetchGet(`/api/teacher-profiles/by-department/${departmentId}`, resolve, reject)
-      );
+      const profiles = await new Promise((resolve, reject) => {
+        fetchGet(
+          `/api/teacher-profiles/by-department/${departmentId}`,
+          (data) => resolve(data),
+          (error) => reject(error),
+          () => reject(new Error("Network error"))
+        );
+      });
 
       if (!Array.isArray(profiles)) throw new Error("Dữ liệu không hợp lệ");
 
-      const userDetailPromises = profiles.map((p) =>
-        new Promise((resolve) =>
-          fetchGet(`/api/users/${p.userId}`, (user) => resolve({ ...p, user }), () => resolve(p))
-        )
+      const detailedTeachers = await Promise.all(
+        profiles.map(async (profile) => {
+          const userId = profile.userId;
+
+          const userRes = await new Promise((resolve, reject) => {
+            fetchGet(
+              `/api/users/${userId}`,
+              resolve,
+              reject,
+              () => reject(new Error("Lỗi tải user"))
+            );
+          });
+
+          const accountRes = await new Promise((resolve, reject) => {
+            fetchGet(
+              `/api/accounts/${userRes.accountId}`,
+              resolve,
+              reject,
+              () => reject(new Error("Lỗi tải account"))
+            );
+          });
+
+          return {
+            id: userId,
+            fullName: userRes.name || "Chưa có tên",
+            email: userRes.email || "Chưa có",
+            phone: userRes.phoneNumber || "Chưa có",
+            specialization: profile.specialization || "Chưa xác định",
+            hireDate: profile.hireDate
+              ? new Date(profile.hireDate).toLocaleDateString("vi-VN")
+              : "Chưa có",
+            address: userRes.address || "Chưa có",
+            username: accountRes.username || "Chưa có",
+            status: accountRes.status ?? true,
+            accountId: accountRes.id,
+            userData: userRes,
+            profileData: profile,
+          };
+        })
       );
 
-      const detailedTeachers = await Promise.all(userDetailPromises);
-
-      const normalized = detailedTeachers.map((t) => ({
-        id: t.userId,
-        fullName: t.user?.name || "Chưa có tên",
-        email: t.user?.email || "Chưa có email",
-        phone: t.user?.phoneNumber || "Chưa có",
-        specialization: t.specialization || "Chưa xác định",
-        hireDate: t.hireDate,
-        status: t.user?.account?.status ?? true,
-        accountId: t.user?.account?.id || t.userId,
-        departmentName: t.departmentName || "",
-        schoolName: t.user?.school?.name || "",
-      }));
-
-      setTeachers(normalized);
+      setTeachers(detailedTeachers);
     } catch (err) {
-      console.error(err);
+      console.error("Lỗi tải giáo viên:", err);
       toast.error("Không thể tải danh sách giáo viên");
       setTeachers([]);
     } finally {
       setLoading(false);
-      }
+    }
   }, [departmentId]);
 
   useEffect(() => {
-    fetchTeacherProfiles();
-  }, [fetchTeacherProfiles]);
+    fetchTeachers();
+  }, [fetchTeachers]);
 
   const filteredTeachers = useMemo(() => {
     if (!searchTerm.trim()) return teachers;
@@ -135,8 +159,9 @@ export default function TeacherManagement({ predefinedDepartmentId }) {
   const columns = [
     { field: "fullName", headerName: "Họ và tên", flex: 1, minWidth: 200 },
     { field: "email", headerName: "Email", width: 230 },
-    { field: "phone", headerName: "Số điện thoại", width: 140 },
+    { field: "phone", headerName: "Điện thoại", width: 140 },
     { field: "specialization", headerName: "Chuyên môn", width: 180 },
+    { field: "hireDate", headerName: "Ngày tuyển dụng", width: 160 },
     {
       field: "status",
       headerName: "Trạng thái",
@@ -155,17 +180,11 @@ export default function TeacherManagement({ predefinedDepartmentId }) {
       headerName: "Thao tác",
       width: 140,
       sortable: false,
-      filterable: false,
-      disableColumnMenu: true,
       renderCell: (params) => (
         <Box sx={{ display: "flex", gap: 0.5 }}>
-          <Tooltip title="Xem chi tiết">
-            <IconButton
-              size="small"
-              color="primary"
-              onClick={() => handleOpenDetail(params.row)}
-            >
-              <VisibilityIcon fontSize="small" />
+          <Tooltip title="Xem chi tiết & chỉnh sửa">
+            <IconButton size="small" color="primary" onClick={() => handleOpenDetail(params.row)}>
+              <VisibilityIcon />
             </IconButton>
           </Tooltip>
           <Tooltip title={params.row.status ? "Khóa tài khoản" : "Mở khóa tài khoản"}>
@@ -174,7 +193,7 @@ export default function TeacherManagement({ predefinedDepartmentId }) {
               color={params.row.status ? "warning" : "success"}
               onClick={() => handleToggleStatus(params.row.accountId, params.row.status)}
             >
-              {params.row.status ? <BlockIcon fontSize="small" /> : <CheckCircleIcon fontSize="small" />}
+              {params.row.status ? <BlockIcon /> : <CheckCircleIcon />}
             </IconButton>
           </Tooltip>
         </Box>
@@ -184,13 +203,14 @@ export default function TeacherManagement({ predefinedDepartmentId }) {
 
   return (
     <Box className="teacher-management-container">
+      <ToastContainer position="top-right" autoClose={3000} />
+
       <Box className="toolbar">
         <TextField
-          placeholder="Tìm kiếm theo tên, email, điện thoại, chuyên môn..."
+          placeholder="Tìm kiếm tên, email, điện thoại, chuyên môn..."
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
           className="search-field"
-          size="small"
           InputProps={{
             startAdornment: (
               <InputAdornment position="start">
@@ -198,13 +218,11 @@ export default function TeacherManagement({ predefinedDepartmentId }) {
               </InputAdornment>
             ),
           }}
-          sx={{ width: 420 }}
+          sx={{ width: 450 }}
         />
-
         <Button
           variant="contained"
           startIcon={<AddIcon />}
-          className="add-button"
           onClick={() => setOpenAddTeacher(true)}
         >
           Thêm giáo viên
@@ -213,31 +231,20 @@ export default function TeacherManagement({ predefinedDepartmentId }) {
 
       <Box className="table-container">
         {loading ? (
-          <Box className="loading">
+          <Box sx={{ textAlign: "center", py: 6 }}>
             <CircularProgress />
-            <Typography variant="body1" sx={{ mt: 2 }}>
-              Đang tải danh sách giáo viên...
-            </Typography>
+            <Typography>Đang tải danh sách giáo viên...</Typography>
           </Box>
         ) : (
           <DataGrid
             rows={filteredTeachers}
             columns={columns}
             getRowId={(row) => row.id}
-            pageSizeOptions={[10, 25, 50, 100]}
+            pageSizeOptions={[10, 20, 50]}
             checkboxSelection
             disableRowSelectionOnClick
             autoHeight
-            localeText={{
-              noRowsLabel:
-                teachers.length === 0
-                  ? "Không có giáo viên nào trong tổ bộ môn này"
-                  : "Không tìm thấy giáo viên phù hợp với từ khóa",
-            }}
-            sx={{
-              "& .MuiDataGrid-columnHeaders": { backgroundColor: "#f8f9ff", fontWeight: 600 },
-              "& .MuiDataGrid-row:hover": { backgroundColor: "#f5f7ff" },
-            }}
+            localeText={{ noRowsLabel: "Không có giáo viên nào trong tổ này" }}
           />
         )}
       </Box>
@@ -246,37 +253,15 @@ export default function TeacherManagement({ predefinedDepartmentId }) {
         open={openAddTeacher}
         onClose={() => setOpenAddTeacher(false)}
         departmentId={departmentId}
-        onSuccess={fetchTeacherProfiles}
+        onSuccess={() => fetchTeachers()}
       />
 
-      <Dialog open={openDetail} onClose={handleCloseDetail} maxWidth="sm" fullWidth>
-        <DialogTitle>Chi tiết giáo viên</DialogTitle>
-        <DialogContent dividers>
-          {selectedTeacher && (
-            <>
-              <Typography gutterBottom><strong>Họ và tên:</strong> {selectedTeacher.fullName}</Typography>
-              <Typography gutterBottom><strong>Email:</strong> {selectedTeacher.email}</Typography>
-              <Typography gutterBottom><strong>Số điện thoại:</strong> {selectedTeacher.phone}</Typography>
-              <Typography gutterBottom><strong>Chuyên môn:</strong> {selectedTeacher.specialization}</Typography>
-              <Typography gutterBottom><strong>Tổ bộ môn:</strong> {selectedTeacher.departmentName || "Chưa thuộc tổ"}</Typography>
-              <Typography gutterBottom><strong>Trường:</strong> {selectedTeacher.schoolName}</Typography>
-              <Typography gutterBottom>
-                <strong>Trạng thái:</strong>{" "}
-                <Chip
-                  size="small"
-                  label={selectedTeacher.status ? "Hoạt động" : "Bị khóa"}
-                  color={selectedTeacher.status ? "success" : "error"}
-                />
-              </Typography>
-            </>
-          )}
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={handleCloseDetail} variant="outlined" color="primary">
-            Đóng
-          </Button>
-        </DialogActions>
-      </Dialog>
+      <DetailTeacher
+        open={openDetail}
+        onClose={handleCloseDetail}
+        teacher={selectedTeacher}
+        onUpdateSuccess={() => fetchTeachers()}   // Refresh list sau khi edit thành công
+      />
     </Box>
   );
 }

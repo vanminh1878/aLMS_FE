@@ -1,0 +1,39 @@
+/* src/components/Admin/TeacherManagement/DetailTeacher/DetailTeacher.css */
+.detail-teacher-dialog .dialog-title {
+  padding: 28px;
+  background: linear-gradient(135deg, #00c6ff 0%, #0072ff 100%);
+  color: white;
+  text-align: center;
+}
+
+.detail-teacher-dialog .dialog-title .MuiTypography-root,
+.detail-teacher-dialog .dialog-title .MuiSvgIcon-root {
+  color: white !important;
+}
+
+.detail-teacher-dialog .dialog-content {
+  padding: 40px 48px !important;
+}
+
+.detail-teacher-dialog .MuiDialogActions-root {
+  background-color: #f1f5f9;
+  border-top: 1px solid #e2e8f0;
+}
+
+.detail-teacher-dialog .MuiPaper-root {
+  border-radius: 20px;
+  overflow: hidden;
+  box-shadow: 0 15px 50px rgba(0, 0, 0, 0.18);
+}
+
+.detail-teacher-dialog .MuiOutlinedInput-root {
+  border-radius: 12px !important;
+}
+
+.detail-teacher-dialog .Mui-disabled {
+  -webkit-text-fill-color: inherit !important;
+}
+
+.detail-teacher-dialog .MuiOutlinedInput-root.Mui-disabled fieldset {
+  border-color: #c8c8c8 !important;
+}

@@ -28,6 +28,7 @@ import "./DepartmentManagement.css";
 
 import { fetchGet, fetchDelete } from "../../../lib/httpHandler.js";
 import AddDepartment from "../../../components/Admin/DepartmentManagement/AddDepartment/AddDepartment.jsx";
+import DetailDepartment from "../../../components/Admin/DepartmentManagement/DetailDepartment/DetailDepartment.jsx";
 import TeacherManagement from "../TeacherManagement/TeacherManagement.jsx";
 import { showYesNoMessageBox } from "../../../components/MessageBox/YesNoMessageBox/showYesNoMessgeBox.js";
 
@@ -37,6 +38,9 @@ export default function DepartmentManagement() {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedDepartment, setSelectedDepartment] = useState(null);
   const [openAdd, setOpenAdd] = useState(false);
+  const [openDetail, setOpenDetail] = useState(false);
+  const [detailDept, setDetailDept] = useState(null);
+  const [schoolId, setSchoolId] = useState(null);
 
   const fetchDepartments = useCallback(async () => {
     setLoading(true);
@@ -57,7 +61,9 @@ export default function DepartmentManagement() {
         setLoading(false);
         return;
       }
-
+      if (user?.schoolId) {
+  setSchoolId(user.schoolId);
+}
       const data = await new Promise((resolve, reject) => {
         fetchGet(`/api/schools/${user.schoolId}/departments`, resolve, reject);
       });
@@ -67,7 +73,7 @@ export default function DepartmentManagement() {
       setDepartments(
         data.map((d) => ({
           ...d,
-          teacherCount: d.teacherCount || 0,
+          teacherCount: d.teacherCount || d.numTeachers || 0,
           isDeleted: d.isDeleted || false,
         }))
       );
@@ -100,12 +106,21 @@ export default function DepartmentManagement() {
     if (!confirm) return;
 
     try {
-      await fetchDelete(`/api/departments/${id}`);
+      await new Promise((resolve, reject) => {
+        fetchDelete(`/api/departments/${id}`, null, resolve, reject);
+      });
       toast.success(`Đã khóa tổ "${name}"`);
-      setDepartments((prev) => prev.map(d => d.id === id ? { ...d, isDeleted: true } : d));
+      setDepartments((prev) =>
+        prev.map((d) => (d.id === id ? { ...d, isDeleted: true } : d))
+      );
     } catch {
       toast.error("Không thể khóa tổ bộ môn");
     }
+  };
+
+  const handleOpenDetail = (dept) => {
+    setDetailDept(dept);
+    setOpenDetail(true);
   };
 
   const renderGrid = () => {
@@ -147,6 +162,18 @@ export default function DepartmentManagement() {
                 raised
                 onClick={() => setSelectedDepartment(dept)}
               >
+                <Box className="card-header-edit">
+                  <IconButton
+                    size="small"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleOpenDetail(dept);
+                    }}
+                  >
+                    <EditIcon fontSize="small" />
+                  </IconButton>
+                </Box>
+
                 <CardContent className="card-content">
                   <Box className="dept-header">
                     <BusinessIcon />
@@ -159,9 +186,10 @@ export default function DepartmentManagement() {
                   )}
                   <Box className="teacher-count">
                     <PeopleIcon />
-                    <span>{dept.numTeachers} giáo viên</span>
+                    <span>{dept.teacherCount || dept.numTeachers || 0} giáo viên</span>
                   </Box>
                 </CardContent>
+
                 <CardActions className="card-actions">
                   <Chip label="Hoạt động" size="small" color="success" />
                   <IconButton
@@ -236,6 +264,23 @@ export default function DepartmentManagement() {
         onSuccess={() => {
           setOpenAdd(false);
           fetchDepartments();
+        }}
+      />
+
+      <DetailDepartment
+        open={openDetail}
+        onClose={() => setOpenDetail(false)}
+        dept={detailDept}
+        schoolId={schoolId}
+        onUpdateSuccess={(updatedDept) => {
+          setOpenDetail(false);
+          setDepartments((prev) =>
+            prev.map((d) => (d.id === updatedDept.id ? updatedDept : d))
+          );
+          // Nếu đang xem danh sách giáo viên của tổ này → có thể reload nếu cần
+          if (selectedDepartment?.id === updatedDept.id) {
+            setSelectedDepartment(updatedDept);
+          }
         }}
       />
     </Box>
