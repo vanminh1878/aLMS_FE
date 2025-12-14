@@ -23,14 +23,15 @@ import SearchIcon from "@mui/icons-material/Search";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import PeopleIcon from "@mui/icons-material/People";
 import SchoolIcon from "@mui/icons-material/School";
-import DeleteForeverIcon from "@mui/icons-material/DeleteForever";
 import EditIcon from "@mui/icons-material/Edit";
 import AddIcon from "@mui/icons-material/Add";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import "./ClassManagement.css";
 
-import { fetchGet, fetchDelete } from "../../../lib/httpHandler.js";
+import { fetchGet, fetchPut } from "../../../lib/httpHandler.js";
+import LockIcon from "@mui/icons-material/Lock";
+import LockOpenIcon from "@mui/icons-material/LockOpen";
 import StudentManagement from "../StudentManagement/StudentManagement.jsx";
 import AddClass from "../../../components/Admin/ClassManagement/AddClass/AddClass.jsx";
 import DetailClass from "../../../components/Admin/ClassManagement/DetailClass/DetailClass.jsx";
@@ -47,6 +48,7 @@ const GRADE_OPTIONS = [
 export default function ClassManagement() {
   const [classes, setClasses] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [schoolId, setSchoolId] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedGrade, setSelectedGrade] = useState("all");
   const [selectedClass, setSelectedClass] = useState(null);
@@ -68,6 +70,8 @@ export default function ClassManagement() {
         fetchGet(`/api/accounts/by-account/${accountId}`, resolve, reject, () => reject("exception"));
       });
 
+      if (user && user.schoolId) setSchoolId(user.schoolId);
+
       if (!user || !user.schoolId) {
         toast.error("Không tìm thấy thông tin trường học của bạn");
         setLoading(false);
@@ -83,8 +87,9 @@ export default function ClassManagement() {
       setClasses(
         classes.map((cls) => ({
           ...cls,
-          studentCount: cls.studentCount || 0,
-          isDeleted: cls.isDeleted || false,
+          studentCount: cls.studentCount || cls.numStudent || 0,
+          // API returns `isDelete`; normalize to `isDelete`
+          isDelete: typeof cls.isDelete !== "undefined" ? cls.isDelete : (cls.isDeleted || false),
         }))
       );
     } catch (err) {
@@ -102,26 +107,40 @@ export default function ClassManagement() {
 
   const filteredClasses = useMemo(() => {
     return classes.filter((cls) => {
-      if (cls.isDeleted) return false;
       if (searchTerm.trim() && !cls.className.toLowerCase().includes(searchTerm.toLowerCase())) return false;
       if (selectedGrade !== "all" && cls.grade !== selectedGrade) return false;
       return true;
     });
   }, [classes, searchTerm, selectedGrade]);
 
-  const handleDeleteClass = async (classId, className) => {
+  const handleToggleLock = async (cls, lock) => {
     const confirm = await showYesNoMessageBox(
-      `Bạn có chắc muốn <strong>khóa lớp ${className}</strong> không?<br><br>Lớp sẽ bị ẩn và không thể thêm học sinh mới.`
+      `Bạn có chắc muốn <strong>${lock ? "khóa" : "mở khóa"} lớp ${cls.className}</strong> không?`
     );
     if (!confirm) return;
 
-    try {
-      await fetchDelete(`/api/classes/${classId}`);
-      toast.success(`Đã khóa lớp ${className}`);
-      setClasses((prev) => prev.filter((c) => c.id !== classId));
-    } catch {
-      toast.error("Không thể khóa lớp");
-    }
+    const payload = {
+      id: cls.id,
+      className: cls.className,
+      grade: cls.grade || cls.gradeId,
+      schoolYear: cls.schoolYear,
+      schoolId: schoolId,
+      isDelete: !!lock,
+    };
+
+    fetchPut(
+      "/api/classes",
+      payload,
+      (res) => {
+        if (res.success || res.id) {
+          toast.success(`${lock ? "Đã khóa" : "Đã mở khóa"} lớp ${cls.className}`);
+          setClasses((prev) => prev.map((c) => (c.id === cls.id ? { ...c, isDelete: !!lock } : c)));
+        } else {
+          toast.error(res.message || (lock ? "Không thể khóa lớp" : "Không thể mở khóa lớp"));
+        }
+      },
+      () => toast.error(lock ? "Không thể khóa lớp" : "Không thể mở khóa lớp")
+    );
   };
 
   const handleOpenDetail = (cls) => {
@@ -164,9 +183,9 @@ export default function ClassManagement() {
           <Grid item xs={12} sm={6} md={4} lg={3} key={cls.id}>
             <Zoom in style={{ transitionDelay: `${i * 50}ms` }}>
               <Card
-                className={`class-card ${cls.isDeleted ? "locked" : ""}`}
+                className={`class-card ${cls.isDelete ? "locked" : ""}`}
                 raised
-                onClick={() => !cls.isDeleted && setSelectedClass(cls)}
+                onClick={() => !cls.isDelete && setSelectedClass(cls)}
               >
                 <Box className="card-header-edit">
                   <IconButton
@@ -190,24 +209,23 @@ export default function ClassManagement() {
                   </Typography>
                   <Box className="student-count">
                     <PeopleIcon />
-                    <span>{cls.studentCount} học sinh</span>
+                    <span>{cls.numStudent} học sinh</span>
                   </Box>
                 </CardContent>
 
                 <CardActions className="card-actions">
-                  <Chip label={cls.isDeleted ? "Đã khóa" : "Hoạt động"} size="small" />
-                  {!cls.isDeleted && (
-                    <IconButton
-                      size="small"
-                      color="error"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleDeleteClass(cls.id, cls.className);
-                      }}
-                    >
-                      <DeleteForeverIcon />
-                    </IconButton>
-                  )}
+                  <Chip label={cls.isDelete ? "Đã khóa" : "Hoạt động"} size="small" onClick={() => {}} />
+                  <IconButton
+                    size="small"
+                    className="lock-toggle-btn"
+                    color={cls.isDelete ? "success" : "warning"}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleToggleLock(cls, !cls.isDelete);
+                    }}
+                  >
+                    {cls.isDelete ? <LockOpenIcon /> : <LockIcon />}
+                  </IconButton>
                 </CardActions>
               </Card>
             </Zoom>

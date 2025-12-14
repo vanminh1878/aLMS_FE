@@ -208,6 +208,12 @@
   z-index: 11;
 }
 
+/* Allow the lock/unlock button to be clickable even when card is locked */
+.class-card.locked .card-actions .MuiIconButton-root,
+.class-card.locked .card-actions .lock-toggle-btn {
+  pointer-events: auto;
+}
+
 .MuiGrid-container {
   margin-top: 2rem !important;
 }

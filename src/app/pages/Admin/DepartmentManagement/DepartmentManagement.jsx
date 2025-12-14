@@ -159,7 +159,7 @@ export default function DepartmentManagement() {
                   )}
                   <Box className="teacher-count">
                     <PeopleIcon />
-                    <span>{dept.teacherCount} giáo viên</span>
+                    <span>{dept.numTeachers} giáo viên</span>
                   </Box>
                 </CardContent>
                 <CardActions className="card-actions">

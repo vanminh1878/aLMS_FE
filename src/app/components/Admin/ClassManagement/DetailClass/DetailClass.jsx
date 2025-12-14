@@ -1,4 +1,3 @@
-// src/components/Admin/ClassManagement/DetailClass/DetailClass.jsx
 import React, { useState, useEffect, useRef } from "react";
 import {
   Dialog,
@@ -27,41 +26,55 @@ import BlockIcon from "@mui/icons-material/Block";
 import { toast } from "react-toastify";
 import { fetchPut, fetchGet } from "../../../../lib/httpHandler.js";
 
-import "./DetailClass.css"; // dùng chung CSS với DetailSchool
+import "./DetailClass.css";
 
 const DetailClass = ({ open, onClose, cls, onUpdateSuccess }) => {
   const [isEditMode, setIsEditMode] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [grades, setGrades] = useState([]); // danh sách khối
+
+  const GRADE_OPTIONS = [
+    { value: "1", name: "Lớp 1" },
+    { value: "2", name: "Lớp 2" },
+    { value: "3", name: "Lớp 3" },
+    { value: "4", name: "Lớp 4" },
+    { value: "5", name: "Lớp 5" },
+  ];
+
+  const [grades] = useState(GRADE_OPTIONS);
+
   const [formData, setFormData] = useState({
     className: "",
-    gradeId: "",
+    grade: "",
+    schoolYear: "",
   });
 
   const nameRef = useRef(null);
+  const [schoolId, setSchoolId] = useState(null);
 
-  // Lấy danh sách khối (Grade)
   useEffect(() => {
+    const accountId = localStorage.getItem("accountId");
+    if (!accountId) return;
     fetchGet(
-      "/api/grades",
-      (data) => {
-        setGrades(Array.isArray(data) ? data : []);
+      `/api/accounts/by-account/${accountId}`,
+      (user) => {
+        if (user && user.schoolId) setSchoolId(user.schoolId);
       },
-      () => toast.error("Lỗi tải danh sách khối")
+      () => {
+        // ignore
+      }
     );
   }, []);
 
-  // Cập nhật form khi có cls
   useEffect(() => {
     if (cls) {
       setFormData({
         className: cls.className || "",
-        gradeId: cls.gradeId || "",
+        grade: cls.grade || cls.gradeId || "",
+        schoolYear: cls.schoolYear || "",
       });
     }
   }, [cls]);
 
-  // Focus tên lớp khi edit
   useEffect(() => {
     if (isEditMode && nameRef.current) {
       setTimeout(() => nameRef.current?.focus(), 100);
@@ -74,7 +87,8 @@ const DetailClass = ({ open, onClose, cls, onUpdateSuccess }) => {
     setIsEditMode(false);
     setFormData({
       className: cls.className || "",
-      gradeId: cls.gradeId || "",
+      grade: cls.grade || cls.gradeId || "",
+      schoolYear: cls.schoolYear || "",
     });
   };
 
@@ -83,8 +97,12 @@ const DetailClass = ({ open, onClose, cls, onUpdateSuccess }) => {
       toast.error("Tên lớp không được để trống!");
       return;
     }
-    if (!formData.gradeId) {
+    if (!formData.grade) {
       toast.error("Vui lòng chọn khối lớp!");
+      return;
+    }
+    if (!formData.schoolYear.trim()) {
+      toast.error("Vui lòng nhập niên khóa!");
       return;
     }
 
@@ -93,8 +111,9 @@ const DetailClass = ({ open, onClose, cls, onUpdateSuccess }) => {
     const payload = {
       id: cls.id,
       className: formData.className.trim(),
-      gradeId: formData.gradeId,
-      status: cls.status,
+      grade: formData.grade,
+      schoolId: schoolId || cls?.schoolId || null,
+      schoolYear: formData.schoolYear.trim(),
     };
 
     fetchPut(
@@ -106,23 +125,28 @@ const DetailClass = ({ open, onClose, cls, onUpdateSuccess }) => {
           const updated = {
             ...cls,
             className: formData.className.trim(),
-            gradeId: formData.gradeId,
-            gradeName: grades.find(g => g.id === formData.gradeId)?.name || "Khối mới",
+            grade: formData.grade,
+            gradeName: grades.find((g) => g.value === formData.grade)?.name || `Lớp ${formData.grade}`,
+            schoolYear: formData.schoolYear.trim(),
           };
           if (onUpdateSuccess) onUpdateSuccess(updated);
           setIsEditMode(false);
         } else {
           toast.error(res.message || "Cập nhật thất bại");
         }
+        setLoading(false);
       },
-      (error) => toast.error(error.title || "Lỗi khi cập nhật lớp"),
-      () => setLoading(false)
+      (error) => {
+        toast.error(error.title || "Lỗi khi cập nhật lớp");
+        setLoading(false);
+      }
     );
   };
 
   if (!cls) return null;
 
-  const currentGradeName = grades.find(g => g.id === cls.gradeId)?.name || "Chưa có khối";
+  const currentGradeName =
+    grades.find((g) => g.value === (cls.grade || cls.gradeId))?.name || "Chưa có khối";
 
   return (
     <Dialog
@@ -188,24 +212,35 @@ const DetailClass = ({ open, onClose, cls, onUpdateSuccess }) => {
                 Khối lớp
               </Typography>
             </Box>
+
             {isEditMode ? (
               <TextField
                 select
                 fullWidth
-                value={formData.gradeId}
-                onChange={(e) => setFormData({ ...formData, gradeId: e.target.value })}
+                value={formData.grade}
+                onChange={(e) => setFormData({ ...formData, grade: e.target.value })}
                 variant="outlined"
                 size="medium"
+                displayEmpty
+                renderValue={(selected) => {
+                  if (!selected) return <em>Chọn khối lớp</em>;
+                  return grades.find((g) => g.value === selected)?.name || selected;
+                }}
                 sx={{
                   "& .MuiOutlinedInput-root": {
                     backgroundColor: "#fff",
                     fontSize: "1.05rem",
                     borderRadius: "12px",
+                    minWidth: 230,
+                    minHeight: 58,
+                  },
+                  "& .MuiSelect-select": {
+                    padding: "12px 14px !important", // đảm bảo padding đều, không bị đè
                   },
                 }}
               >
                 {grades.map((g) => (
-                  <MenuItem key={g.id} value={g.id}>
+                  <MenuItem key={g.value} value={g.value}>
                     {g.name}
                   </MenuItem>
                 ))}
@@ -228,6 +263,32 @@ const DetailClass = ({ open, onClose, cls, onUpdateSuccess }) => {
             )}
           </Grid>
 
+          {/* Niên khóa */}
+          <Grid item xs={12}>
+            <Box display="flex" alignItems="center" gap={1} mb={1}>
+              <Typography variant="subtitle1" color="textSecondary" fontWeight={500}>
+                Niên khóa
+              </Typography>
+            </Box>
+            <TextField
+              fullWidth
+              value={formData.schoolYear}
+              onChange={(e) => setFormData({ ...formData, schoolYear: e.target.value })}
+              disabled={!isEditMode}
+              variant="outlined"
+              size="medium"
+              placeholder="Ví dụ: 2024-2025"
+              InputProps={{ readOnly: !isEditMode }}
+              sx={{
+                "& .MuiOutlinedInput-root": {
+                  backgroundColor: isEditMode ? "#fff" : "#f9f9f9",
+                  fontSize: "1.05rem",
+                  borderRadius: "12px",
+                },
+              }}
+            />
+          </Grid>
+
           {/* Trạng thái */}
           <Grid item xs={12}>
             <Box
@@ -236,23 +297,23 @@ const DetailClass = ({ open, onClose, cls, onUpdateSuccess }) => {
               gap={2}
               p={2}
               bgcolor="#fafafa"
-              borderRadius="12ar12px"
+              borderRadius="12px"
               border="1px solid #e0e0e0"
               boxShadow="0 2px 4px rgba(0,0,0,0.05)"
             >
               <Box display="flex" alignItems="center" gap={1}>
-                {cls.status ? (
-                  <CheckCircleIcon fontSize="small" color="success" />
-                ) : (
+                {cls.isDelete ? (
                   <BlockIcon fontSize="small" color="error" />
+                ) : (
+                  <CheckCircleIcon fontSize="small" color="success" />
                 )}
                 <Typography variant="subtitle1" color="textSecondary" fontWeight={500}>
                   Trạng thái
                 </Typography>
               </Box>
               <Chip
-                label={cls.status ? "Hoạt động" : "Bị khóa"}
-                color={cls.status ? "success" : "error"}
+                label={cls.isDelete ? "Bị khóa" : "Hoạt động"}
+                color={cls.isDelete ? "error" : "success"}
                 size="medium"
                 sx={{
                   ml: "auto",
@@ -274,7 +335,13 @@ const DetailClass = ({ open, onClose, cls, onUpdateSuccess }) => {
       <DialogActions sx={{ p: 3, justifyContent: "flex-end", gap: 2 }}>
         {isEditMode ? (
           <>
-            <Button variant="outlined" startIcon={<CancelIcon />} onClick={handleCancel} size="large" sx={{ minWidth: 120, borderRadius: "12px" }}>
+            <Button
+              variant="outlined"
+              startIcon={<CancelIcon />}
+              onClick={handleCancel}
+              size="large"
+              sx={{ minWidth: 120, borderRadius: "12px" }}
+            >
               Hủy
             </Button>
             <Button
@@ -291,10 +358,22 @@ const DetailClass = ({ open, onClose, cls, onUpdateSuccess }) => {
           </>
         ) : (
           <>
-            <Button variant="outlined" color="info" startIcon={<EditIcon />} onClick={handleEdit} size="large" sx={{ minWidth: 140, borderRadius: "12px" }}>
+            <Button
+              variant="outlined"
+              color="info"
+              startIcon={<EditIcon />}
+              onClick={handleEdit}
+              size="large"
+              sx={{ minWidth: 140, borderRadius: "12px" }}
+            >
               Chỉnh sửa
             </Button>
-            <Button variant="contained" onClick={onClose} size="large" sx={{ minWidth: 140, borderRadius: "12px" }}>
+            <Button
+              variant="contained"
+              onClick={onClose}
+              size="large"
+              sx={{ minWidth: 140, borderRadius: "12px" }}
+            >
               Đóng
             </Button>
           </>

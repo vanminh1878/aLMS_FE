@@ -171,6 +171,7 @@ useEffect(() => {
         handleCancel();
       },
       (error) => {
+        console.log("Lỗi thêm lớp:", error);
         toast.error(error?.title || "Thêm lớp thất bại");
         setSaving(false);
       },
