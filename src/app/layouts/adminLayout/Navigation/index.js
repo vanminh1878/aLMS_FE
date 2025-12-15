@@ -33,6 +33,7 @@ export default function Navigation() {
     // Hệ thống
     { name: "Phân quyền", path: "/admin/role-management", icon: <FaCog className="fs-5 icon" /> },
     { name: "Hành vi học tập", path: "/admin/behaviour-management", icon: <FaVideo className="fs-5 icon" /> },
+    { name: "Quản lý tài khoản", path: "/admin/account-management", icon: <FaUsersCog className="fs-5 icon" /> },
   ];
 
   const { pathname } = useLocation();
