@@ -7,19 +7,18 @@ import {
   CircularProgress,
   IconButton,
   Tooltip,
+  Chip,
 } from "@mui/material";
 import { DataGrid } from "@mui/x-data-grid";
 import SearchIcon from "@mui/icons-material/Search";
-import VisibilityIcon from "@mui/icons-material/Visibility"; // Icon xem chi tiết
-import AddCircleOutlineIcon from "@mui/icons-material/AddCircleOutline"; // Icon thêm
+import VisibilityIcon from "@mui/icons-material/Visibility";
+import AddCircleOutlineIcon from "@mui/icons-material/AddCircleOutline";
 import VideoLibraryIcon from "@mui/icons-material/VideoLibrary";
 import { toast } from "react-toastify";
-
 import { fetchGet } from "../../../lib/httpHandler.js";
 
-// Import 2 component mới
-import DetailBehaviour from "../../../components/Admin/BehaviourManagement/DetailBehaviour.jsx"; // Điều chỉnh đường dẫn nếu cần
-import AddBehaviourForm from "../../../components/Admin/BehaviourManagement/AddBehaviourForm"; // Điều chỉnh đường dẫn nếu cần
+import DetailBehaviour from "../../../components/Admin/BehaviourManagement/DetailBehaviour.jsx";
+import AddBehaviourForm from "../../../components/Admin/BehaviourManagement/AddBehaviourForm";
 
 export default function BehaviourManagement() {
   const [searchTerm, setSearchTerm] = useState("");
@@ -27,57 +26,62 @@ export default function BehaviourManagement() {
   const [loading, setLoading] = useState(false);
   const [className, setClassName] = useState("");
 
-  // State cho Dialog
   const [openDetail, setOpenDetail] = useState(false);
   const [openAdd, setOpenAdd] = useState(false);
   const [selectedStudent, setSelectedStudent] = useState(null);
 
-  // Hàm xử lý dữ liệu từ API
+  // Xử lý dữ liệu từ API
   const processClassBehaviours = (summaryList) => {
     return summaryList.map((item) => {
       const behaviours = item.behaviours || [];
 
-      const hasVideo = behaviours.some((b) => b.video);
-      const violationCount = behaviours.filter((b) => b.result === "Vi phạm").length;
-      const rewardCount = behaviours.filter((b) => b.result === "Khen thưởng").length;
+      // Kiểm tra có video không
+      const hasVideo = behaviours.some((b) => b.video && b.video.trim() !== "");
 
-      let result = "";
-      let count = 0;
-      if (violationCount > 0 && rewardCount > 0) {
-        result = "Cả hai";
-        count = violationCount + rewardCount;
-      } else if (violationCount > 0) {
-        result = "Vi phạm";
-        count = violationCount;
-      } else if (rewardCount > 0) {
-        result = "Khen thưởng";
-        count = rewardCount;
-      } else {
-        result = "Chưa có";
-        count = 0;
-      }
+      // Tổng số lần hành vi
+      const count = behaviours.length;
 
-      const latestDate = behaviours.length > 0
-        ? behaviours.reduce((latest, b) => {
-            const bDate = new Date(b.date || b.createdAt || b.Date);
-            return bDate > latest ? bDate : latest;
-          }, new Date(0))
+      // Sắp xếp behaviours theo order (nếu có) hoặc date để lấy cái mới nhất
+      const sortedBehaviours = [...behaviours].sort((a, b) => {
+        // Ưu tiên order nếu có
+        if (a.order !== undefined && b.order !== undefined) {
+          return b.order - a.order; // order cao hơn = mới hơn
+        }
+        // Nếu không có order, dùng date
+        return new Date(b.date || b.createdAt) - new Date(a.date || a.createdAt);
+      });
+
+      // Lấy hành vi mới nhất
+      const latestBehaviour = sortedBehaviours[0];
+      const latestResult = latestBehaviour ? (latestBehaviour.result || "").trim() : "";
+
+      // Ngày gần nhất (dùng date của hành vi mới nhất)
+      const latestDate = sortedBehaviours.length > 0
+        ? new Date(sortedBehaviours[0].date || sortedBehaviours[0].createdAt || sortedBehaviours[0].Date)
         : null;
+
+      // Xác định màu chip dựa trên nội dung result
+      let chipColor = "warning";
+      if (latestResult.toLowerCase().includes("vi phạm") || latestResult.toLowerCase().includes("aggressive")) {
+        chipColor = "error";
+      } else if (latestResult.toLowerCase().includes("khen thưởng") || latestResult.toLowerCase().includes("reward")) {
+        chipColor = "success";
+      }
 
       return {
         id: item.studentId,
         studentId: item.studentId,
         fullName: item.fullName || "Chưa có tên",
         videoUrl: hasVideo ? "has-video" : null,
-        result,
+        latestResult,        // chỉ lưu result mới nhất
+        chipColor,           // màu cho chip
         count,
         latestDate: latestDate ? latestDate.toISOString().split("T")[0] : null,
-        behaviours: behaviours,
+        behaviours,          // giữ nguyên để xem chi tiết
       };
     });
   };
 
-  // Hàm tải dữ liệu - dùng useCallback để có thể gọi lại sau khi thêm mới
   const loadData = useCallback(async () => {
     setLoading(true);
     try {
@@ -158,7 +162,6 @@ export default function BehaviourManagement() {
     );
   }, [students, searchTerm]);
 
-  // Handler mở dialog
   const handleOpenDetail = (student) => {
     if (student.behaviours.length === 0) {
       toast.info(`${student.fullName}: Chưa có hành vi nào`);
@@ -185,6 +188,7 @@ export default function BehaviourManagement() {
       headerName: "Video",
       width: 100,
       sortable: false,
+      align: "center",
       renderCell: (params) =>
         params.value ? (
           <Tooltip title="Có video minh chứng">
@@ -197,19 +201,27 @@ export default function BehaviourManagement() {
         ),
     },
     {
-      field: "result",
+      field: "latestResult",
       headerName: "Kết quả",
-      width: 140,
+      width: 420,
+      sortable: false,
       renderCell: (params) => {
-        let color = "text.primary";
-        if (params.value === "Vi phạm") color = "error";
-        if (params.value === "Khen thưởng") color = "success";
-        if (params.value === "Cả hai") color = "warning";
+        const result = params.row.latestResult;
+        const color = params.row.chipColor;
+
+        if (!result) {
+          return <Typography color="text.secondary">Chưa có</Typography>;
+        }
 
         return (
-          <Typography variant="body2" fontWeight={600} color={color}>
-            {params.value}
-          </Typography>
+          <Chip
+            label={result}
+            size="small"
+            color={color}
+            variant="outlined"
+            clickable={false}
+            onClick={() => {}} // hàm rỗng
+          />
         );
       },
     },
@@ -241,7 +253,6 @@ export default function BehaviourManagement() {
                 <VisibilityIcon />
               </IconButton>
             </Tooltip>
-
             <Tooltip title="Thêm phiếu kiểm điểm / khen thưởng">
               <IconButton size="small" color="success" onClick={() => handleOpenAdd(student)}>
                 <AddCircleOutlineIcon />
@@ -300,7 +311,6 @@ export default function BehaviourManagement() {
         )}
       </Box>
 
-      {/* Dialog xem chi tiết */}
       <DetailBehaviour
         open={openDetail}
         onClose={() => {
@@ -310,7 +320,6 @@ export default function BehaviourManagement() {
         student={selectedStudent}
       />
 
-      {/* Dialog thêm hành vi mới */}
       <AddBehaviourForm
         open={openAdd}
         onClose={() => {
@@ -318,8 +327,8 @@ export default function BehaviourManagement() {
           setSelectedStudent(null);
         }}
         student={selectedStudent}
-         className={className}
-        onSuccess={loadData} // Reload dữ liệu sau khi thêm thành công
+        className={className}
+        onSuccess={loadData}
       />
     </Box>
   );

@@ -6,29 +6,35 @@ import {
   DialogActions,
   Button,
   TextField,
-  FormControl,
-  InputLabel,
-  Select,
-  MenuItem,
   Box,
   Typography,
   Avatar,
   CircularProgress,
+  Chip,
+  Divider,
+  Alert,
 } from "@mui/material";
 import AddCircleOutlineIcon from "@mui/icons-material/AddCircleOutline";
 import CloudUploadIcon from "@mui/icons-material/CloudUpload";
+import SmartToyIcon from "@mui/icons-material/SmartToy";
+import AutoFixHighIcon from "@mui/icons-material/AutoFixHigh";
 import { toast } from "react-toastify";
 import { fetchPost } from "../../../lib/httpHandler";
 import "./BehaviourDialogs.css";
 
+// API AI predict
+const AI_PREDICT_API = "http://127.0.0.1:8000/predict/";
+
 export default function AddBehaviourForm({ open, onClose, student, onSuccess }) {
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(false); // nút Lưu
+  const [aiLoading, setAiLoading] = useState(false); // nút AI
+  const [aiResult, setAiResult] = useState(null);
+
   const [formData, setFormData] = useState({
-    result: "Vi phạm",
-    description: "",
-    date: new Date().toISOString().split("T")[0],
-    video: null,
-    videoName: "",
+    result: "Chưa xác định",
+    date: new Date().toISOString().split("T")[0], // yyyy-MM-dd
+    video: null, // File object (chỉ dùng để hiển thị và AI)
+    videoName: "", // Tên file hiển thị trên UI
   });
 
   if (!student) return null;
@@ -36,36 +42,98 @@ export default function AddBehaviourForm({ open, onClose, student, onSuccess }) 
   const handleFileChange = (e) => {
     const file = e.target.files[0];
     if (file) {
-      setFormData({ ...formData, video: file, videoName: file.name });
+      if (!file.type.startsWith("video/")) {
+        toast.error("Vui lòng chọn file video hợp lệ");
+        return;
+      }
+      if (file.size > 200 * 1024 * 1024) {
+        toast.error("Video không được lớn hơn 200MB");
+        return;
+      }
+      setFormData({
+        ...formData,
+        video: file,
+        videoName: file.name,
+      });
+      setAiResult(null); // reset kết quả AI khi chọn video mới
+    }
+  };
+
+  const handleAiPredict = async () => {
+    if (!formData.video) {
+      toast.warning("Vui lòng chọn video trước khi kiểm tra");
+      return;
+    }
+
+    setAiLoading(true);
+    setAiResult(null);
+
+    try {
+      const payload = new FormData();
+      payload.append("file", formData.video);
+
+      const response = await fetch(AI_PREDICT_API, {
+        method: "POST",
+        body: payload,
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Lỗi server: ${response.status} - ${errorText}`);
+      }
+
+      const data = await response.json();
+      setAiResult(data);
+
+      if (data.detected_behaviors && data.detected_behaviors.length > 0) {
+        setFormData((prev) => ({
+          ...prev,
+          result: prev.result
+            ? data.detected_behaviors
+            : data.detected_behaviors,
+        }));
+
+        toast.success("Phân tích video thành công! Đã gợi ý nội dung mô tả.");
+      } else {
+        toast.info("AI không phát hiện hành vi đặc biệt nào.");
+      }
+    } catch (err) {
+      console.error("AI Predict Error:", err);
+      toast.error("Lỗi khi phân tích video: " + err.message);
+    } finally {
+      setAiLoading(false);
     }
   };
 
   const handleSubmit = async () => {
-    if (!formData.description.trim()) {
-      toast.error("Vui lòng nhập nội dung hành vi");
-      return;
-    }
-
     setLoading(true);
-    try {
-      const payload = new FormData();
-      payload.append("studentId", student.studentId);
-      payload.append("result", formData.result);
-      payload.append("description", formData.description.trim());
-      payload.append("date", formData.date);
-      if (formData.video) {
-        payload.append("video", formData.video);
-      }
 
+    try {
+      // Tạo payload đúng theo backend
+      let resultString = formData.result;
+    if (Array.isArray(formData.result)) {
+      resultString = formData.result.join(", "); // hoặc "\n" nếu muốn xuống dòng
+    }
+      const payload = {
+        studentId: student.studentId,
+        result: resultString,
+        date: new Date(formData.date).toISOString(), // chuyển sang ISO full
+        order: 0,
+        video: formData.videoName || null, // tạm thời gửi tên file (hoặc null nếu không có)
+      };
+
+      const endpoint = `/api/students/${student.studentId}/behaviours`;
+
+      // Gửi JSON (không dùng FormData vì backend nhận JSON)
       await new Promise((resolve, reject) => {
-        fetchPost("/api/behaviours", payload, resolve, reject, true);
+        fetchPost(endpoint, payload, resolve, reject, false); // false = gửi JSON
       });
 
       toast.success("Thêm hành vi thành công!");
       onClose();
       onSuccess?.();
     } catch (err) {
-      console.error(err);
+      console.error("Lỗi khi thêm hành vi:", err);
       toast.error("Lỗi khi thêm hành vi");
     } finally {
       setLoading(false);
@@ -73,15 +141,15 @@ export default function AddBehaviourForm({ open, onClose, student, onSuccess }) 
   };
 
   return (
-    <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth className="behaviour-dialog">
+    <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth className="behaviour-dialog">
       <DialogTitle>
-        <Box className="dialog-header">
+        <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
           <Avatar sx={{ bgcolor: "success.main", width: 56, height: 56 }}>
             <AddCircleOutlineIcon fontSize="large" />
           </Avatar>
           <Box>
             <Typography variant="h6" fontWeight={600}>
-              Thêm phiếu kiểm tra / khen thưởng
+              Thêm phiếu kiểm tra
             </Typography>
             <Typography variant="body2" color="text.secondary">
               {student.fullName}
@@ -90,20 +158,9 @@ export default function AddBehaviourForm({ open, onClose, student, onSuccess }) 
         </Box>
       </DialogTitle>
 
-      <DialogContent dividers className="dialog-content">
+      <DialogContent dividers>
         <Box sx={{ display: "flex", flexDirection: "column", gap: 3, mt: 1 }}>
-          <FormControl fullWidth>
-            <InputLabel>Kết quả</InputLabel>
-            <Select
-              value={formData.result}
-              label="Kết quả"
-              onChange={(e) => setFormData({ ...formData, result: e.target.value })}
-            >
-              <MenuItem value="Vi phạm">Vi phạm</MenuItem>
-              <MenuItem value="Khen thưởng">Khen thưởng</MenuItem>
-            </Select>
-          </FormControl>
-
+          {/* Ngày kiểm tra */}
           <TextField
             label="Ngày kiểm tra"
             type="date"
@@ -113,16 +170,7 @@ export default function AddBehaviourForm({ open, onClose, student, onSuccess }) 
             InputLabelProps={{ shrink: true }}
           />
 
-          <TextField
-            label="Nội dung hành vi"
-            multiline
-            rows={5}
-            value={formData.description}
-            onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-            fullWidth
-            placeholder="Mô tả chi tiết hành vi vi phạm hoặc khen thưởng..."
-          />
-
+          {/* Upload video (chỉ để chọn và chạy AI - tạm không upload thật) */}
           <Box>
             <Button
               variant="outlined"
@@ -131,13 +179,8 @@ export default function AddBehaviourForm({ open, onClose, student, onSuccess }) 
               fullWidth
               sx={{ py: 1.5 }}
             >
-              Chọn video minh chứng (nếu có)
-              <input
-                type="file"
-                hidden
-                accept="video/*"
-                onChange={handleFileChange}
-              />
+              Chọn video minh chứng (tối đa 200MB)
+              <input type="file" hidden accept="video/*" onChange={handleFileChange} />
             </Button>
             {formData.videoName && (
               <Typography variant="body2" color="success.main" sx={{ mt: 1, ml: 1 }}>
@@ -145,18 +188,88 @@ export default function AddBehaviourForm({ open, onClose, student, onSuccess }) 
               </Typography>
             )}
           </Box>
+
+          {/* Nút kiểm tra AI */}
+          {formData.video && (
+            <Box sx={{ textAlign: "center" }}>
+              <Button
+                variant="contained"
+                color="secondary"
+                size="large"
+                startIcon={aiLoading ? <CircularProgress size={20} /> : <SmartToyIcon />}
+                onClick={handleAiPredict}
+                disabled={aiLoading}
+                sx={{ px: 4 }}
+              >
+                {aiLoading ? "Đang phân tích video..." : "Kiểm tra hành vi bằng AI"}
+              </Button>
+            </Box>
+          )}
+
+          {/* Kết quả AI */}
+          {aiResult && (
+            <Box sx={{ mt: 2 }}>
+              <Divider sx={{ my: 3 }}>
+                <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                  <AutoFixHighIcon color="primary" />
+                  <Typography variant="subtitle1" fontWeight={600} color="primary.main">
+                    Kết quả phân tích AI
+                  </Typography>
+                </Box>
+              </Divider>
+
+              {aiResult.detected_behaviors?.length > 0 ? (
+                <>
+                  <Alert severity="info" sx={{ mb: 2 }}>
+                    AI phát hiện <strong>{aiResult.detected_behaviors.length}</strong> hành vi đáng chú ý:
+                  </Alert>
+                  <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1, mb: 2 }}>
+                    {aiResult.detected_behaviors.map((behavior) => (
+                      <Chip key={behavior} label={behavior} color="warning" variant="outlined" clickable={false}
+            onClick={() => {}} />
+                    ))}
+                  </Box>
+                </>
+              ) : (
+                <Alert severity="success">Không phát hiện hành vi bất thường đáng kể.</Alert>
+              )}
+
+              <Typography variant="body2" color="text.secondary" gutterBottom>
+                Chi tiết xác suất (threshold 0.3):
+              </Typography>
+              <Box sx={{ maxHeight: 200, overflowY: "auto", bgcolor: "grey.50", p: 2, borderRadius: 1 }}>
+                {aiResult.all_probabilities.map((item) => (
+                  <Box
+                    key={item.behavior}
+                    sx={{ display: "flex", justifyContent: "space-between", py: 0.5 }}
+                  >
+                    <Typography variant="body2">{item.behavior}</Typography>
+                    <Typography
+                      variant="body2"
+                      fontWeight={item.probability > 0.3 ? 600 : 400}
+                      color={item.probability > 0.3 ? "error.main" : "text.secondary"}
+                    >
+                      {(item.probability * 100).toFixed(1)}%
+                    </Typography>
+                  </Box>
+                ))}
+              </Box>
+            </Box>
+          )}
+
+
         </Box>
       </DialogContent>
 
       <DialogActions>
-        <Button onClick={onClose} disabled={loading}>
+        <Button onClick={onClose} disabled={loading || aiLoading}>
           Hủy
         </Button>
         <Button
           onClick={handleSubmit}
           variant="contained"
           color="primary"
-          disabled={loading}
+          disabled={loading || aiLoading}
           startIcon={loading && <CircularProgress size={20} />}
         >
           {loading ? "Đang lưu..." : "Lưu hành vi"}
