@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useMemo } from "react";
+import React, { useEffect, useState, useMemo, useCallback } from "react";
 import {
   Box,
   Typography,
@@ -10,19 +10,29 @@ import {
 } from "@mui/material";
 import { DataGrid } from "@mui/x-data-grid";
 import SearchIcon from "@mui/icons-material/Search";
-import ChecklistIcon from "@mui/icons-material/Checklist"; // Icon mới: sổ check hành vi
+import VisibilityIcon from "@mui/icons-material/Visibility"; // Icon xem chi tiết
+import AddCircleOutlineIcon from "@mui/icons-material/AddCircleOutline"; // Icon thêm
 import VideoLibraryIcon from "@mui/icons-material/VideoLibrary";
 import { toast } from "react-toastify";
 
 import { fetchGet } from "../../../lib/httpHandler.js";
 
+// Import 2 component mới
+import DetailBehaviour from "../../../components/Admin/BehaviourManagement/DetailBehaviour.jsx"; // Điều chỉnh đường dẫn nếu cần
+import AddBehaviourForm from "../../../components/Admin/BehaviourManagement/AddBehaviourForm"; // Điều chỉnh đường dẫn nếu cần
+
 export default function BehaviourManagement() {
   const [searchTerm, setSearchTerm] = useState("");
-  const [students, setStudents] = useState([]); // Dữ liệu sau khi xử lý
+  const [students, setStudents] = useState([]);
   const [loading, setLoading] = useState(false);
   const [className, setClassName] = useState("");
 
-  // Tổng hợp dữ liệu từ API trả về (mỗi học sinh có danh sách behaviours)
+  // State cho Dialog
+  const [openDetail, setOpenDetail] = useState(false);
+  const [openAdd, setOpenAdd] = useState(false);
+  const [selectedStudent, setSelectedStudent] = useState(null);
+
+  // Hàm xử lý dữ liệu từ API
   const processClassBehaviours = (summaryList) => {
     return summaryList.map((item) => {
       const behaviours = item.behaviours || [];
@@ -62,89 +72,81 @@ export default function BehaviourManagement() {
         result,
         count,
         latestDate: latestDate ? latestDate.toISOString().split("T")[0] : null,
-        behaviours: behaviours, // Giữ nguyên để dùng khi xem chi tiết
+        behaviours: behaviours,
       };
     });
   };
 
-  useEffect(() => {
-    const loadData = async () => {
-      setLoading(true);
-      try {
-        const accountId = localStorage.getItem("accountId");
-        if (!accountId) {
-          toast.error("Phiên đăng nhập hết hạn");
-          return;
-        }
-
-        // 1. Lấy thông tin giáo viên
-        const user = await new Promise((resolve, reject) => {
-          fetchGet(`/api/accounts/by-account/${accountId}`, resolve, reject);
-        });
-
-        if (!user?.id) {
-          toast.error("Không lấy được thông tin giáo viên");
-          setLoading(false);
-          return;
-        }
-
-        const homeroomTeacherId = user.id;
-
-        // 2. Lấy lớp chủ nhiệm
-        const classData = await new Promise((resolve) => {
-          fetchGet(
-            `/api/classes/by-homeroom-teacher/${homeroomTeacherId}`,
-            resolve,
-            () => resolve(null)
-          );
-        });
-
-        if (!classData) {
-          toast.info("Bạn chưa được phân công chủ nhiệm lớp nào");
-          setClassName("Chưa chủ nhiệm");
-          setStudents([]);
-          setLoading(false);
-          return;
-        }
-
-        setClassName(classData.className || `Lớp ${classData.grade}`);
-
-        const classId = classData.id;
-
-        // 3. Gọi API mới: Lấy toàn bộ hành vi của lớp (chỉ 1 lần gọi!)
-        const summaryData = await new Promise((resolve) => {
-          fetchGet(
-            `/api/behaviours/by-class?classId=${classId}`,
-            (data) => resolve(Array.isArray(data) ? data : []),
-            () => resolve([])
-          );
-        });
-
-        if (summaryData.length === 0) {
-          toast.info("Lớp chưa có dữ liệu hành vi học sinh");
-          setStudents([]);
-          setLoading(false);
-          return;
-        }
-
-        // 4. Xử lý dữ liệu để hiển thị
-        const processedStudents = processClassBehaviours(summaryData);
-
-        // Sắp xếp theo tên
-        processedStudents.sort((a, b) => a.fullName.localeCompare(b.fullName));
-
-        setStudents(processedStudents);
-
-      } catch (err) {
-        console.error(err);
-        toast.error("Lỗi tải dữ liệu hành vi học sinh");
-      } finally {
-        setLoading(false);
+  // Hàm tải dữ liệu - dùng useCallback để có thể gọi lại sau khi thêm mới
+  const loadData = useCallback(async () => {
+    setLoading(true);
+    try {
+      const accountId = localStorage.getItem("accountId");
+      if (!accountId) {
+        toast.error("Phiên đăng nhập hết hạn");
+        return;
       }
-    };
 
-    loadData();
+      const user = await new Promise((resolve, reject) => {
+        fetchGet(`/api/accounts/by-account/${accountId}`, resolve, reject);
+      });
+
+      if (!user?.id) {
+        toast.error("Không lấy được thông tin giáo viên");
+        setLoading(false);
+        return;
+      }
+
+      const homeroomTeacherId = user.id;
+
+      const classData = await new Promise((resolve) => {
+        fetchGet(
+          `/api/classes/by-homeroom-teacher/${homeroomTeacherId}`,
+          resolve,
+          () => resolve(null)
+        );
+      });
+
+      if (!classData) {
+        toast.info("Bạn chưa được phân công chủ nhiệm lớp nào");
+        setClassName("Chưa chủ nhiệm");
+        setStudents([]);
+        setLoading(false);
+        return;
+      }
+
+      setClassName(classData.className || `Lớp ${classData.grade}`);
+      const classId = classData.id;
+
+      const summaryData = await new Promise((resolve) => {
+        fetchGet(
+          `/api/behaviours/by-class?classId=${classId}`,
+          (data) => resolve(Array.isArray(data) ? data : []),
+          () => resolve([])
+        );
+      });
+
+      if (summaryData.length === 0) {
+        toast.info("Lớp chưa có dữ liệu hành vi học sinh");
+        setStudents([]);
+        setLoading(false);
+        return;
+      }
+
+      const processedStudents = processClassBehaviours(summaryData);
+      processedStudents.sort((a, b) => a.fullName.localeCompare(b.fullName));
+      setStudents(processedStudents);
+    } catch (err) {
+      console.error(err);
+      toast.error("Lỗi tải dữ liệu hành vi học sinh");
+    } finally {
+      setLoading(false);
+    }
   }, []);
+
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
 
   const filteredStudents = useMemo(() => {
     if (!searchTerm.trim()) return students;
@@ -155,6 +157,21 @@ export default function BehaviourManagement() {
         s.studentId?.toString().toLowerCase().includes(lower)
     );
   }, [students, searchTerm]);
+
+  // Handler mở dialog
+  const handleOpenDetail = (student) => {
+    if (student.behaviours.length === 0) {
+      toast.info(`${student.fullName}: Chưa có hành vi nào`);
+      return;
+    }
+    setSelectedStudent(student);
+    setOpenDetail(true);
+  };
+
+  const handleOpenAdd = (student) => {
+    setSelectedStudent(student);
+    setOpenAdd(true);
+  };
 
   const columns = [
     {
@@ -212,36 +229,25 @@ export default function BehaviourManagement() {
     {
       field: "actions",
       headerName: "Thao tác",
-      width: 130,
+      width: 180,
       sortable: false,
+      align: "center",
       renderCell: (params) => {
         const student = params.row;
         return (
-          <Tooltip title="Xem danh sách hành vi">
-            <IconButton
-              size="small"
-              color="primary"
-              onClick={() => {
-                if (student.behaviours.length === 0) {
-                  toast.info(`${student.fullName}: Chưa có hành vi nào`);
-                  return;
-                }
+          <Box sx={{ display: "flex", gap: 1, justifyContent: "center" }}>
+            <Tooltip title="Xem chi tiết hành vi">
+              <IconButton size="small" color="primary" onClick={() => handleOpenDetail(student)}>
+                <VisibilityIcon />
+              </IconButton>
+            </Tooltip>
 
-                const details = student.behaviours
-                  .map((b, idx) => 
-                    `${idx + 1}. ${b.result} - ${new Date(b.date || b.Date).toLocaleDateString("vi-VN")}`
-                  )
-                  .join("\n");
-
-                toast.info(`${student.fullName} (${student.count} lần):\n${details}`, {
-                  autoClose: false,
-                });
-                // TODO: Sau này có thể mở Dialog chi tiết đẹp hơn
-              }}
-            >
-              <ChecklistIcon /> {/* Icon sổ check hành vi */}
-            </IconButton>
-          </Tooltip>
+            <Tooltip title="Thêm phiếu kiểm điểm / khen thưởng">
+              <IconButton size="small" color="success" onClick={() => handleOpenAdd(student)}>
+                <AddCircleOutlineIcon />
+              </IconButton>
+            </Tooltip>
+          </Box>
         );
       },
     },
@@ -293,6 +299,28 @@ export default function BehaviourManagement() {
           />
         )}
       </Box>
+
+      {/* Dialog xem chi tiết */}
+      <DetailBehaviour
+        open={openDetail}
+        onClose={() => {
+          setOpenDetail(false);
+          setSelectedStudent(null);
+        }}
+        student={selectedStudent}
+      />
+
+      {/* Dialog thêm hành vi mới */}
+      <AddBehaviourForm
+        open={openAdd}
+        onClose={() => {
+          setOpenAdd(false);
+          setSelectedStudent(null);
+        }}
+        student={selectedStudent}
+         className={className}
+        onSuccess={loadData} // Reload dữ liệu sau khi thêm thành công
+      />
     </Box>
   );
 }
