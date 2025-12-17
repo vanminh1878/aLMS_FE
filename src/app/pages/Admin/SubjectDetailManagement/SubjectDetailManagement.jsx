@@ -219,7 +219,7 @@ export default function SubjectDetailManagement() {
 							{subject?.name || "Đang tải..."}
 						</Typography>
 						<Box display="flex" gap={2} alignItems="center" mt={1}>
-							<Chip label={subject?.category || "N/A"} color="primary" size="small" />
+							<Chip label={subject?.category || "N/A"} color="primary" size="small" clickable={false} onClick={() => {}} />
 							<Typography variant="body2" color="text.secondary">
 								{subject?.description || "Chưa có mô tả"}
 							</Typography>

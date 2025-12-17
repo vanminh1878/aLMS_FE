@@ -1,5 +1,5 @@
 // AddExerciseDialog.jsx
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import {
   Dialog,
   DialogTitle,
@@ -19,6 +19,7 @@ import {
   Select,
   MenuItem,
   FormControl,
+  Alert,
 } from "@mui/material";
 import CloseIcon from "@mui/icons-material/Close";
 import AddIcon from "@mui/icons-material/Add";
@@ -36,7 +37,7 @@ const emptyAnswer = (order = 0) => ({
   orderNumber: order,
 });
 
-const emptyQuestion = (order = 0) => ({
+const emptyQuestion = (order = 1) => ({
   questionContent: "",
   questionImage: "",
   questionType: "MultipleChoice",
@@ -50,14 +51,43 @@ const AddExerciseDialog = ({ open, onClose, topicId, onSuccess }) => {
   const [title, setTitle] = useState("");
   const [hasTimeLimit, setHasTimeLimit] = useState(false);
   const [timeLimit, setTimeLimit] = useState("");
-  const [totalScore, setTotalScore] = useState(0);
-  const [questions, setQuestions] = useState([emptyQuestion(0)]);
+  const [totalScore, setTotalScore] = useState("");
+  const [questions, setQuestions] = useState([emptyQuestion(1)]);
   const [loading, setLoading] = useState(false);
 
   const editorRefs = useRef({});
 
-  const addQuestion = () => setQuestions((s) => [...s, emptyQuestion(s.length)]);
-  const removeQuestion = (idx) => setQuestions((s) => s.filter((_, i) => i !== idx));
+  // Tính tổng điểm hiện tại của tất cả các câu hỏi
+  const currentTotalQuestionScore = questions.reduce((sum, q) => sum + (Number(q.score) || 0), 0);
+
+  // Tự động chia điểm đều khi thay đổi tổng điểm hoặc số lượng câu hỏi
+  useEffect(() => {
+    if (!totalScore || isNaN(totalScore) || Number(totalScore) <= 0) return;
+
+    const total = Number(totalScore);
+    const questionCount = questions.length;
+    const scorePerQuestion = Math.round((total / questionCount) * 10) / 10; // Làm tròn 1 chữ số
+
+    setQuestions((prev) =>
+      prev.map((q, idx) => ({
+        ...q,
+        score: scorePerQuestion,
+        orderNumber: idx + 1,
+      }))
+    );
+  }, [totalScore, questions.length]);
+
+  const addQuestion = () => {
+    setQuestions((s) => [...s, emptyQuestion(s.length + 1)]);
+  };
+
+  const removeQuestion = (idx) => {
+    setQuestions((s) =>
+      s
+        .filter((_, i) => i !== idx)
+        .map((q, i) => ({ ...q, orderNumber: i + 1 }))
+    );
+  };
 
   const addAnswer = (qIdx) =>
     setQuestions((s) =>
@@ -103,7 +133,6 @@ const AddExerciseDialog = ({ open, onClose, topicId, onSuccess }) => {
     if (!ref) return;
     ref.focus();
     document.execCommand(command, false, value);
-    // Cập nhật state sau khi format
     updateQuestionField(qIdx, "questionContent", ref.innerHTML);
   };
 
@@ -112,19 +141,56 @@ const AddExerciseDialog = ({ open, onClose, topicId, onSuccess }) => {
       toast.error("Vui lòng nhập tiêu đề bài tập");
       return false;
     }
+
+    if (!totalScore || Number(totalScore) <= 0) {
+      toast.error("Vui lòng nhập tổng điểm hợp lệ (lớn hơn 0)");
+      return false;
+    }
+
+    if (hasTimeLimit && (!timeLimit || Number(timeLimit) <= 0)) {
+      toast.error("Vui lòng nhập thời gian giới hạn hợp lệ (lớn hơn 0)");
+      return false;
+    }
+
+    // Kiểm tra tổng điểm các câu hỏi
+    if (Math.abs(currentTotalQuestionScore - Number(totalScore)) > 0.01) {
+      toast.error(
+        `Tổng điểm các câu hỏi (${currentTotalQuestionScore}) phải bằng tổng điểm bài tập (${totalScore})`
+      );
+      return false;
+    }
+
     for (let i = 0; i < questions.length; i++) {
       const q = questions[i];
+
       if (!q.questionContent || q.questionContent.trim() === "<br>" || q.questionContent.trim() === "") {
         toast.error(`Câu hỏi ${i + 1} chưa có nội dung`);
         return false;
       }
-      if (q.questionType === "MultipleChoice" && q.answers.length < 2) {
-        toast.error(`Câu hỏi ${i + 1} cần ít nhất 2 đáp án`);
+
+      if (!q.score || Number(q.score) <= 0) {
+        toast.error(`Câu hỏi ${i + 1} phải có điểm lớn hơn 0`);
         return false;
       }
-      if (q.questionType === "MultipleChoice" && !q.answers.some((a) => a.isCorrect)) {
-        toast.error(`Câu hỏi ${i + 1} cần ít nhất 1 đáp án đúng`);
-        return false;
+
+      if (q.questionType === "MultipleChoice") {
+        if (q.answers.length < 2) {
+          toast.error(`Câu hỏi ${i + 1} cần ít nhất 2 đáp án`);
+          return false;
+        }
+
+        if (!q.answers.some((a) => a.isCorrect)) {
+          toast.error(`Câu hỏi ${i + 1} cần ít nhất 1 đáp án đúng`);
+          return false;
+        }
+
+        // Kiểm tra đáp án không được để trống
+        for (let j = 0; j < q.answers.length; j++) {
+          if (!q.answers[j].answerContent.trim()) {
+            toast.error(`Đáp án ${j + 1} của câu hỏi ${i + 1} không được để trống`);
+            return false;
+          }
+        }
       }
     }
     return true;
@@ -159,8 +225,8 @@ const AddExerciseDialog = ({ open, onClose, topicId, onSuccess }) => {
             questionContent: q.questionContent,
             questionImage: q.questionImage || null,
             questionType: q.questionType,
-            orderNumber: q.orderNumber ?? i,
-            score: q.score || 1,
+            orderNumber: q.orderNumber,
+            score: Number(q.score) || 1,
             explanation: q.explanation || null,
             exerciseId,
             answers:
@@ -174,7 +240,7 @@ const AddExerciseDialog = ({ open, onClose, topicId, onSuccess }) => {
           };
 
           await fetchPost(
-            `/api/exercises/${exerciseId}`,
+            `/api/exercises/${exerciseId}/Questions`,
             qPayload,
             () => {},
             () => toast.error(`Lỗi thêm câu hỏi ${i + 1}`)
@@ -185,11 +251,12 @@ const AddExerciseDialog = ({ open, onClose, topicId, onSuccess }) => {
         onSuccess?.();
         onClose();
 
+        // Reset form
         setTitle("");
         setHasTimeLimit(false);
         setTimeLimit("");
-        setTotalScore(0);
-        setQuestions([emptyQuestion(0)]);
+        setTotalScore("");
+        setQuestions([emptyQuestion(1)]);
       },
       (err) => toast.error(err?.message || "Lỗi thêm bài tập")
     );
@@ -247,18 +314,37 @@ const AddExerciseDialog = ({ open, onClose, topicId, onSuccess }) => {
               <Paper elevation={3} sx={{ p: 3, height: "100%" }}>
                 <Stack spacing={3}>
                   <TextField
-                    label="Tiêu đề bài tập *"
+                    label="Tiêu đề bài tập"
                     fullWidth
                     value={title}
                     onChange={(e) => setTitle(e.target.value)}
+                    required
                   />
-                  <TextField
-                    label="Tổng điểm"
-                    type="number"
-                    fullWidth
-                    value={totalScore}
-                    onChange={(e) => setTotalScore(e.target.value)}
-                  />
+                  <Box>
+                    <TextField
+                      label="Tổng điểm"
+                      type="number"
+                      fullWidth
+                      value={totalScore}
+                      onChange={(e) => setTotalScore(e.target.value)}
+                      InputProps={{ inputProps: { min: 1 } }}
+                      required
+                      helperText="Nhập tổng điểm để tự động chia đều cho các câu hỏi"
+                    />
+                    {totalScore && (
+                      <Box mt={1}>
+                        {Math.abs(currentTotalQuestionScore - Number(totalScore)) > 0.01 ? (
+                          <Alert severity="warning">
+                            Tổng điểm các câu hiện tại: <strong>{currentTotalQuestionScore}</strong> (khác với tổng điểm bài tập)
+                          </Alert>
+                        ) : (
+                          <Alert severity="success">
+                            Tổng điểm các câu: <strong>{currentTotalQuestionScore}</strong> (đúng)
+                          </Alert>
+                        )}
+                      </Box>
+                    )}
+                  </Box>
                   <FormControlLabel
                     control={
                       <Checkbox
@@ -270,11 +356,13 @@ const AddExerciseDialog = ({ open, onClose, topicId, onSuccess }) => {
                   />
                   {hasTimeLimit && (
                     <TextField
-                      label="Thời gian (phút)"
+                      label="Thời gian (phút) "
                       type="number"
                       fullWidth
                       value={timeLimit}
                       onChange={(e) => setTimeLimit(e.target.value)}
+                      InputProps={{ inputProps: { min: 1 } }}
+                      required
                     />
                   )}
                 </Stack>
@@ -323,15 +411,10 @@ const AddExerciseDialog = ({ open, onClose, topicId, onSuccess }) => {
                           size="small"
                           sx={{ width: 100 }}
                           value={q.score}
-                          onChange={(e) => updateQuestionField(qi, "score", e.target.value)}
-                        />
-                        <TextField
-                          label="Thứ tự"
-                          type="number"
-                          size="small"
-                          sx={{ width: 100 }}
-                          value={q.orderNumber}
-                          onChange={(e) => updateQuestionField(qi, "orderNumber", e.target.value)}
+                          onChange={(e) =>
+                            updateQuestionField(qi, "score", parseFloat(e.target.value) || 0)
+                          }
+                          InputProps={{ inputProps: { min: 0.5, step: 0.5 } }}
                         />
                       </Box>
 
@@ -370,7 +453,6 @@ const AddExerciseDialog = ({ open, onClose, topicId, onSuccess }) => {
                       </IconButton>
                     </Box>
 
-                    {/* Ô nhập nội dung câu hỏi - ĐÃ SỬA LỖI CON TRỎ NHẢY */}
                     <Box
                       contentEditable
                       suppressContentEditableWarning
@@ -392,11 +474,8 @@ const AddExerciseDialog = ({ open, onClose, topicId, onSuccess }) => {
                       ref={(el) => {
                         if (el) {
                           editorRefs.current[qi] = el;
-
-                          // Chỉ đồng bộ nội dung khi cần (tránh loop và giữ con trỏ)
                           const currentHTML = el.innerHTML.trim();
                           const expectedHTML = (q.questionContent || "").trim();
-
                           if (
                             (currentHTML === "" || currentHTML === "<br>") &&
                             expectedHTML &&
@@ -453,6 +532,8 @@ const AddExerciseDialog = ({ open, onClose, topicId, onSuccess }) => {
                               onChange={(e) =>
                                 updateAnswerField(qi, ai, "answerContent", e.target.value)
                               }
+                              error={!a.answerContent.trim() && a.answerContent !== undefined}
+                              helperText={!a.answerContent.trim() ? "Không được để trống" : ""}
                               sx={{
                                 flex: "1 1 400px",
                                 maxWidth: { xs: "100%", sm: "600px" },

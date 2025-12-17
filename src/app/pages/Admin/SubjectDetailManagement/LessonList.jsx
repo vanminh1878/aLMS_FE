@@ -40,8 +40,8 @@ const LessonList = ({ lessons = [], selectedLesson, onSelectLesson, searchTerm =
           </Box>
 
           <Box display="flex" alignItems="center" gap={2} mt={2}>
-            <Chip label={lesson.resourceType} size="small" color={lesson.resourceType === "Video" ? "primary" : "default"} variant="outlined" />
-            {lesson.isRequired && <Chip label="Bắt buộc" size="small" color="error" />}
+            <Chip label={lesson.resourceType} size="small" color={lesson.resourceType === "Video" ? "primary" : "default"} variant="outlined" clickable={false} onClick={() => {}} />
+            {lesson.isRequired && <Chip label="Bắt buộc" size="small" color="error" clickable={false} onClick={() => {}}/>}
           </Box>
 
           <Box mt={3}>
@@ -111,8 +111,8 @@ const LessonList = ({ lessons = [], selectedLesson, onSelectLesson, searchTerm =
             </Box>
 
             <Box display="flex" alignItems="center" gap={1}>
-              <Chip label={lesson.resourceType} size="small" color={lesson.resourceType === "Video" ? "primary" : "default"} variant="outlined" />
-              {lesson.isRequired && <Chip label="Bắt buộc" size="small" color="error" />}
+              <Chip label={lesson.resourceType} size="small" color={lesson.resourceType === "Video" ? "primary" : "default"} variant="outlined" clickable={false} onClick={() => {}}/>
+              {lesson.isRequired && <Chip label="Bắt buộc" size="small" color="error" clickable={false} onClick={() => {}}/>}
             </Box>
           </CardContent>
         </Card>
