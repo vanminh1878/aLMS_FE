@@ -152,7 +152,7 @@ export default function SubjectManagement() {
   // Xóa môn học
   const handleDelete = async (id, name) => {
     const ok = await showYesNoMessageBox(
-      `Xóa môn học <strong>"${name}"</strong>?<br><br>Dữ liệu sẽ bị xóa vĩnh viễn.`
+      `Xóa môn học "${name}"?<br><br>Dữ liệu sẽ bị xóa vĩnh viễn.`
     );
     if (!ok) return;
 

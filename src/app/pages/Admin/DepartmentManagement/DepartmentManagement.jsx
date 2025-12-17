@@ -101,7 +101,7 @@ export default function DepartmentManagement() {
 
   const handleDelete = async (id, name) => {
     const confirm = await showYesNoMessageBox(
-      `Bạn có chắc muốn <strong>khóa tổ bộ môn "${name}"</strong> không?<br><br>Tổ sẽ bị ẩn khỏi hệ thống.`
+      `Bạn có chắc muốn khóa tổ bộ môn "${name}" không?<br><br>Tổ sẽ bị ẩn khỏi hệ thống.`
     );
     if (!confirm) return;
 

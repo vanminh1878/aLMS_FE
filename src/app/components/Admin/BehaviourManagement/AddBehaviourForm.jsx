@@ -221,7 +221,7 @@ export default function AddBehaviourForm({ open, onClose, student, onSuccess }) 
               {aiResult.detected_behaviors?.length > 0 ? (
                 <>
                   <Alert severity="info" sx={{ mb: 2 }}>
-                    AI phát hiện <strong>{aiResult.detected_behaviors.length}</strong> hành vi đáng chú ý:
+                    AI phát hiện <trong>{aiResult.detected_behaviors.length}</trong> hành vi đáng chú ý:
                   </Alert>
                   <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1, mb: 2 }}>
                     {aiResult.detected_behaviors.map((behavior) => (

@@ -115,7 +115,7 @@ export default function ClassManagement() {
 
   const handleToggleLock = async (cls, lock) => {
     const confirm = await showYesNoMessageBox(
-      `Bạn có chắc muốn <strong>${lock ? "khóa" : "mở khóa"} lớp ${cls.className}</strong> không?`
+      `Bạn có chắc muốn ${lock ? "khóa" : "mở khóa"} lớp ${cls.className} không?`
     );
     if (!confirm) return;
 
