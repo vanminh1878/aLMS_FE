@@ -1,5 +1,5 @@
 .class-management-container {
-  padding: 24px;
+  padding: 20px;
   background-color: #f9f9fb;
   min-height: 100vh;
   border-radius: 10px;
@@ -77,6 +77,7 @@
   position: relative;
   display: flex;
   flex-direction: column;
+  margin-top: -45px !important;
 }
 
 .class-card::before {
