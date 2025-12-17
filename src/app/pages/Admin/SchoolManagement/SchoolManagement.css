@@ -1,9 +1,8 @@
-/* src/components/Admin/SchoolManagement/SchoolManagement.css */
-
 .school-management-container {
   padding: 24px;
   background-color: #f9f9fb;
   min-height: 100vh;
+  border-radius: 10px;
 }
 
 .page-title {
@@ -78,4 +77,57 @@
   height: 300px;
   gap: 16px;
   color: #666;
+}
+
+/* MUI overrides to match SubjectManagement styling */
+.school-management-container .MuiSelect-select {
+  background-color: white !important;
+  border-radius: 16px !important;
+}
+
+.school-management-container .MuiOutlinedInput-root {
+  background-color: white !important;
+  border-radius: 16px !important;
+  height: 56px;
+  font-size: 1.05rem;
+}
+
+.school-management-container .MuiOutlinedInput-root .MuiOutlinedInput-notchedOutline {
+  border-width: 2px !important;
+}
+
+.school-management-container .MuiOutlinedInput-root:hover .MuiOutlinedInput-notchedOutline {
+  border-color: #0ea5e9 !important;
+}
+
+.school-management-container .MuiOutlinedInput-root.Mui-focused .MuiOutlinedInput-notchedOutline {
+  border-color: #0ea5e9 !important;
+}
+
+.school-management-container .search-field,
+.school-management-container .MuiTextField-root {
+  background: white !important;
+  border-radius: 16px !important;
+}
+
+.school-management-container .search-field .MuiOutlinedInput-root,
+.school-management-container .MuiTextField-root .MuiOutlinedInput-root {
+  border-radius: 16px;
+  height: 56px;
+  font-size: 1.05rem;
+  padding: 0 16px;
+}
+
+.school-management-container .toolbar .MuiFormControl-root,
+.school-management-container .toolbar .MuiTextField-root {
+  background-color: white;
+  border-radius: 16px;
+}
+
+.school-management-container .MuiInputLabel-outlined.Mui-focused {
+  color: #0ea5e9;
+}
+
+.school-management-container .MuiSelect-icon {
+  color: #0ea5e9;
 }

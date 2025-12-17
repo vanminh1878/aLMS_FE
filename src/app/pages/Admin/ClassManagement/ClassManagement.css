@@ -1,10 +1,10 @@
-/* src/components/Admin/ClassManagement/ClassManagement.css */
-
 .class-management-container {
-  padding: 2rem;
+  padding: 24px;
+  background-color: #f9f9fb;
   min-height: 100vh;
-  background-attachment: fixed;
+  border-radius: 10px;
 }
+
 
 .page-title {
   font-size: 2.5rem;
@@ -235,4 +235,43 @@
   .search-field { width: 100% !important; }
   .left-filters { width: 100%; justify-content: space-between; }
   .toolbar { flex-direction: column; align-items: stretch; }
+}
+
+/* MUI overrides scoped to class page to match SubjectManagement visuals */
+.class-management-container .MuiSelect-select {
+  background-color: white !important;
+  border-radius: 16px !important;
+}
+
+.class-management-container .MuiOutlinedInput-root {
+  background-color: white !important;
+  border-radius: 16px !important;
+  height: 56px;
+  font-size: 1.05rem;
+}
+
+.class-management-container .MuiOutlinedInput-root .MuiOutlinedInput-notchedOutline {
+  border-width: 2px !important;
+}
+
+.class-management-container .MuiOutlinedInput-root:hover .MuiOutlinedInput-notchedOutline {
+  border-color: #0ea5e9 !important;
+}
+
+.class-management-container .MuiOutlinedInput-root.Mui-focused .MuiOutlinedInput-notchedOutline {
+  border-color: #0ea5e9 !important;
+}
+
+.class-management-container .toolbar .MuiFormControl-root,
+.class-management-container .toolbar .MuiTextField-root {
+  background-color: white;
+  border-radius: 16px;
+}
+
+.class-management-container .MuiInputLabel-outlined.Mui-focused {
+  color: #0ea5e9;
+}
+
+.class-management-container .MuiSelect-icon {
+  color: #0ea5e9;
 }

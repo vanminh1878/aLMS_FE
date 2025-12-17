@@ -265,13 +265,14 @@ export default function BehaviourManagement() {
   ];
 
   return (
-    <Box sx={{ padding: 3, backgroundColor: "#f9f9fb", minHeight: "100vh" }}>
-      <Typography variant="h5" gutterBottom sx={{ fontWeight: 600 }}>
+     <Box sx={{ padding: 3, backgroundColor: "#f9f9fb", minHeight: "100vh", borderRadius: 2 }}>
+      <Typography className ="page-title">
         Quản lý Hành vi Học sinh - Lớp {className || "Đang tải..."}
       </Typography>
 
       <Box sx={{ display: "flex", gap: 2, alignItems: "center", mb: 3 }}>
         <TextField
+        className="search-field"
           placeholder="Tìm kiếm học sinh theo tên hoặc mã..."
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}

@@ -164,11 +164,12 @@ export default function SchoolManagement() {
 
       <Box className="toolbar" sx={{ mb: 3, display: "flex", gap: 2, alignItems: "center" }}>
         <TextField
+          className="search-field"
           placeholder="Tìm kiếm theo tên hoặc email..."
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
-          size="small"
-          sx={{ width: 380 }}
+          size="medium"
+          sx={{ flex: 1, maxWidth: 500 }}
           InputProps={{
             startAdornment: (
               <InputAdornment position="start">

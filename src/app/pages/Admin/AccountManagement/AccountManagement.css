@@ -1,63 +1,58 @@
-.personal-information {
-  padding: 20px;
-  max-width: 800px;
-  margin: 0 auto;
+.class-management-container {
+  padding: 28px;
+  background-color: #f9f9fb;
+  min-height: 100vh;
 }
 
-.title {
-  font-size: 1.8rem;
-  font-weight: 600;
-  margin-bottom: 20px;
-  color: #333;
+.page-title {
+  font-size: 2.2rem;
+  font-weight: 800;
+  background: linear-gradient(90deg, #1e40af, #3b82f6);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  letter-spacing: -0.6px;
+  margin-bottom: 1.5rem !important;
 }
 
 .profile-container {
-  background: #fff;
-  border-radius: 10px;
-  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
-  padding: 20px;
+  max-width: 920px;
+  margin: 0 auto;
+  background: rgba(255, 255, 255, 0.95);
+  border-radius: 20px;
+  border: 1px solid rgba(100, 150, 255, 0.08);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.06);
+  padding: 22px;
   display: flex;
   flex-direction: column;
   gap: 20px;
 }
 
 .avatar-section {
-  text-align: center;
+  display: flex;
+  align-items: center;
+  gap: 18px;
 }
 
 .avatar-image {
-  width: 150px;
-  height: 150px;
+  width: 120px;
+  height: 120px;
   border-radius: 50%;
   object-fit: cover;
-  margin-bottom: 10px;
-  margin-right: 20px;
-  margin-left: 100px;
-}
-
-.avatar-upload {
-  display: none;
 }
 
 .upload-button {
-  background: #1976d2;
+  background: #3b82f6;
   color: #fff;
-  padding: 8px 16px;
-  border-radius: 5px;
+  padding: 8px 14px;
+  border-radius: 12px;
   cursor: pointer;
-  display: inline-block;
-  margin-left: 20px!important;
-}
-
-.upload-button:hover {
-  background: #1976d2;
-  
 }
 
 .profile-form {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 20px;
+  gap: 18px;
 }
 
 .form-group {
@@ -66,57 +61,70 @@
 }
 
 .form-group label {
-  font-size: 0.9rem;
-  font-weight: 500;
-  margin-bottom: 5px;
-  color: #333;
+  font-size: 0.95rem;
+  font-weight: 600;
+  margin-bottom: 6px;
+  color: #374151;
 }
 
 .form-input {
-  padding: 10px;
-  border: 1px solid #ddd;
-  border-radius: 5px;
+  padding: 10px 12px;
+  border: 1px solid #e6eefc;
+  border-radius: 12px;
   font-size: 1rem;
   outline: none;
-  width: 250px;
+  width: 100%;
+  background: #fff;
 }
 
 .form-input:focus {
-  border-color: #3a9cff;
-  box-shadow: 0 0 5px rgba(255, 77, 79, 0.3);
+  border-color: #93c5fd;
+  box-shadow: 0 8px 24px rgba(59, 130, 246, 0.08);
 }
 
 .form-input:disabled {
-  background: #f5f5f5;
+  background: #f8fafc;
   cursor: not-allowed;
 }
 
 .submit-button {
-  background: #3a9cff;
+  background: linear-gradient(90deg, #2563eb, #1e40af);
   color: #fff;
-  padding: 12px;
+  padding: 12px 18px;
   border: none;
-  border-radius: 5px;
+  border-radius: 12px;
   font-size: 1rem;
-  font-weight: 600;
+  font-weight: 700;
   cursor: pointer;
   grid-column: span 2;
   text-align: center;
-  margin-top: 10px;
+  margin-top: 8px;
 }
 
 .submit-button:hover {
-  background: #1976d2;
-  
+  filter: brightness(1.05);
 }
 
 .password-section {
-  border-top: 1px solid #ddd;
-  padding-top: 20px;
+  border-top: 1px solid #eef2ff;
+  padding-top: 18px;
 }
 
 .password-section h3 {
-  font-size: 1.2rem;
-  font-weight: 600;
-  margin-bottom: 15px;
+  font-size: 1.1rem;
+  font-weight: 700;
+  margin-bottom: 12px;
+}
+
+/* make the two-account fields row behave like the class toolbar layout */
+.password-row {
+  display: flex;
+  gap: 20px;
+  flex-wrap: wrap;
+}
+
+@media (max-width: 768px) {
+  .profile-form { grid-template-columns: 1fr; }
+  .submit-button { grid-column: span 1; }
+  .page-title { font-size: 1.6rem; }
 }

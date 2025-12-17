@@ -27,6 +27,7 @@ import { toast } from "react-toastify";
 
 import { fetchGet, fetchPut } from "../../../lib/httpHandler.js";
 import { showYesNoMessageBox } from "../../../components/MessageBox/YesNoMessageBox/showYesNoMessgeBox.js";
+import "./RoleManagement.css";
 
 export default function RoleManagement() {
   const [selectedSchoolId, setSelectedSchoolId] = useState("");
@@ -433,21 +434,71 @@ const handleUpdateHomeroom = async (classObj, teacherId = null) => {
   ];
 
   return (
-    <Box sx={{ padding: 3, backgroundColor: "#f9f9fb", minHeight: "100vh" }}>
-      <Typography variant="h5" gutterBottom sx={{ fontWeight: 600 }}>
+    <Box className="role-management-container" sx={{ padding: 3, backgroundColor: "#f9f9fb", minHeight: "100vh", borderRadius: 2 }}>
+      <Typography className ="page-title">
         Quản lý Vai trò Giáo viên
       </Typography>
 
-      <Tabs value={tabIndex} onChange={(e, v) => setTabIndex(v)} sx={{ mb: 3 }}>
-        <Tab label="Quản lý Trưởng bộ môn" />
-        <Tab label="Quản lý Giáo viên chủ nhiệm" />
-      </Tabs>
+     <Tabs
+  value={tabIndex}
+  onChange={(e, v) => setTabIndex(v)}
+  sx={{
+    mb: 3,
+    borderBottom: '1px solid #e5e7eb',
+    '& .MuiTabs-indicator': {
+      height: 4,
+      borderRadius: 2,
+      background: 'linear-gradient(90deg, #1e40af, #3b82f6)',
+    },
+  }}
+>
+  <Tab
+    label="Quản lý Trưởng bộ môn"
+    sx={{
+      textTransform: 'none',
+      fontWeight: 600,
+      fontSize: '1rem',
+      color: '#64748b',
+      minHeight: 48,
+      '&.Mui-selected': {
+        color: '#1e40af',
+        fontWeight: 700,
+      },
+      '&:hover': {
+        color: '#1e40af',
+        backgroundColor: '#eff6ff',
+        borderRadius: 2,
+      },
+    }}
+  />
+  <Tab
+    label="Quản lý Giáo viên chủ nhiệm"
+    sx={{
+      textTransform: 'none',
+      fontWeight: 600,
+      fontSize: '1rem',
+      color: '#64748b',
+      minHeight: 48,
+      '&.Mui-selected': {
+        color: '#1e40af',
+        fontWeight: 700,
+      },
+      '&:hover': {
+        color: '#1e40af',
+        backgroundColor: '#eff6ff',
+        borderRadius: 2,
+      },
+    }}
+  />
+</Tabs>
+
 
       {/* Tab 0: Quản lý Trưởng bộ môn */}
       {tabIndex === 0 && (
         <>
           <Box sx={{ display: "flex", gap: 2, alignItems: "center", mb: 3, flexWrap: "wrap" }}>
             <TextField
+            className="search-field"
               placeholder="Tìm kiếm tên, email, bộ môn..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
@@ -462,7 +513,7 @@ const handleUpdateHomeroom = async (classObj, teacherId = null) => {
               }}
             />
 
-            <FormControl size="small" sx={{ minWidth: 240 }}>
+            <FormControl size="small" sx={{ minWidth: 240 }} className="filter-grade">
               <InputLabel>Bộ môn</InputLabel>
               <Select
                 value={selectedDepartmentId}
@@ -510,6 +561,7 @@ const handleUpdateHomeroom = async (classObj, teacherId = null) => {
         <>
           <Box sx={{ display: "flex", gap: 2, alignItems: "center", mb: 3, flexWrap: "wrap" }}>
             <TextField
+            className="search-field"
               placeholder="Tìm kiếm tên lớp..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
@@ -524,7 +576,7 @@ const handleUpdateHomeroom = async (classObj, teacherId = null) => {
               }}
             />
 
-            <FormControl size="small" sx={{ minWidth: 200 }}>
+            <FormControl className="filter-grade" size="small" sx={{ minWidth: 200 }}>
               <InputLabel>Khối lớp</InputLabel>
               <Select value={gradeFilter} label="Khối lớp" onChange={(e) => setGradeFilter(e.target.value)}>
                 <MenuItem value="all">Tất cả</MenuItem>
@@ -656,7 +708,9 @@ const handleUpdateHomeroom = async (classObj, teacherId = null) => {
     {classForAdd ? (classForAdd.className || classForAdd.name || "-") : ""}
   </DialogTitle>
   <DialogContent>
-    <FormControl fullWidth sx={{ mt: 2 }}>
+    <FormControl
+    className="filter-grade"
+     fullWidth sx={{ mt: 2 }}>
       <InputLabel id="homeroom-teacher-label">Giáo viên chủ nhiệm</InputLabel>
       <Select
         labelId="homeroom-teacher-label"

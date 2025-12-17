@@ -1,19 +1,10 @@
-/* src/components/Admin/SubjectManagement/SubjectManagement.css */
-
 .subject-management-container {
-  padding: 32px;
-  background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+  padding: 24px;
+  background-color: #f9f9fb;
   min-height: 100vh;
+  border-radius: 10px;
 }
 
-.page-title {
-  background: linear-gradient(90deg, #0ea5e9, #0284c7);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-  font-size: 2.6rem !important;
-  margin-bottom: 16px !important;
-}
 
 .toolbar {
   display: flex;
@@ -126,4 +117,71 @@
   background: #f8fafc;
   justify-content: space-between !important;
   border-top: 1px solid #e2e8f0;
+}
+.page-title {
+  font-size: 2.5rem;
+  font-weight: 800;
+  background: linear-gradient(90deg, #1e40af, #3b82f6);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  letter-spacing: -0.8px;
+  margin-bottom: 2.5rem !important;
+}
+
+/* Ô Select (combobox) - nền trắng */
+.subject-management-container .MuiSelect-select {
+  background-color: white !important;
+  border-radius: 16px !important;
+}
+
+.subject-management-container .MuiOutlinedInput-root {
+  background-color: white !important;
+  border-radius: 16px !important;
+  height: 56px;
+  font-size: 1.05rem;
+}
+
+.subject-management-container .MuiOutlinedInput-root .MuiOutlinedInput-notchedOutline {
+  border-width: 2px !important;
+}
+
+.subject-management-container .MuiOutlinedInput-root:hover .MuiOutlinedInput-notchedOutline {
+  border-color: #0ea5e9 !important;
+}
+
+.subject-management-container .MuiOutlinedInput-root.Mui-focused .MuiOutlinedInput-notchedOutline {
+  border-color: #0ea5e9 !important;
+}
+
+/* Ô tìm kiếm - nền trắng + hiệu ứng đẹp */
+.subject-management-container .search-field,
+.subject-management-container .MuiTextField-root {
+  background: white !important;
+  border-radius: 16px !important;
+}
+
+.subject-management-container .search-field .MuiOutlinedInput-root,
+.subject-management-container .MuiTextField-root .MuiOutlinedInput-root {
+  border-radius: 16px;
+  height: 56px;
+  font-size: 1.05rem;
+  padding: 0 16px;
+}
+
+/* Đồng bộ Select và TextField */
+.subject-management-container .toolbar .MuiFormControl-root,
+.subject-management-container .toolbar .MuiTextField-root {
+  background-color: white;
+  border-radius: 16px;
+}
+
+/* Label của Select khi focused */
+.subject-management-container .MuiInputLabel-outlined.Mui-focused {
+  color: #0ea5e9;
+}
+
+/* Icon trong Select (mũi tên xuống) */
+.subject-management-container .MuiSelect-icon {
+  color: #0ea5e9;
 }

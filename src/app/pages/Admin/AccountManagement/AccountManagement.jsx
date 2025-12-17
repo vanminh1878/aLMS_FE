@@ -160,8 +160,8 @@ export default function AccountManagement() {
 
   if (loading) {
     return (
-      <div className="personal-information">
-        <h2 className="title">Thông Tin Cá Nhân</h2>
+      <div className="class-management-container">
+        <h2 className="page-title">Thông Tin Cá Nhân</h2>
         <div style={{ textAlign: "center", padding: "80px" }}>
           Đang tải thông tin...
         </div>
@@ -172,8 +172,8 @@ export default function AccountManagement() {
   return (
     <>
       <ToastContainer />
-      <div className="personal-information">
-        <h2 className="title">Thông Tin Cá Nhân</h2>
+      <div className="class-management-container">
+        <h2 className="page-title">Thông Tin Cá Nhân</h2>
         <div className="profile-container">
           {/* Form chỉnh sửa thông tin cá nhân */}
           <form onSubmit={handleSubmit} className="profile-form">

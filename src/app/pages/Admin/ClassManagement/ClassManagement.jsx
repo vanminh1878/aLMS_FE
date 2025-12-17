@@ -178,6 +178,7 @@ export default function ClassManagement() {
     }
 
     return (
+      <Box className="class-management-container">
       <Grid container spacing={3}>
         {filteredClasses.map((cls, i) => (
           <Grid item xs={12} sm={6} md={4} lg={3} key={cls.id}>
@@ -232,6 +233,7 @@ export default function ClassManagement() {
           </Grid>
         ))}
       </Grid>
+      </Box>
     );
   };
 
