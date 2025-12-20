@@ -7,7 +7,7 @@ const HEADERS = {
 };
 
 const getHeaders = () => {
-  const token = localStorage.getItem("jwtToken");
+  const token = localStorage.getItem("accessToken") || localStorage.getItem("jwtToken");
   if (token === null) {
     return HEADERS;
   }

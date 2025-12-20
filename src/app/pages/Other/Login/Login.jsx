@@ -18,7 +18,7 @@ import VisibilityOffIcon from "@mui/icons-material/VisibilityOff";
 import SchoolIcon from "@mui/icons-material/School";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
-import { fetchPost } from "../../../lib/httpHandler";
+import { fetchPost, fetchGet } from "../../../lib/httpHandler";
 import "./Login.css";
 
 export default function Login() {
@@ -42,15 +42,58 @@ export default function Login() {
       { username, password },
       (result) => {
         if (result.success && result.accessToken) {
+          localStorage.setItem("jwtToken", result.accessToken);
           localStorage.setItem("accessToken", result.accessToken);
           localStorage.setItem("refreshToken", result.refreshToken || "");
           localStorage.setItem("accountId", result.accountId);
-          
-          toast.success("Đăng nhập thành công! Đang chuyển hướng...");
-          
-          setTimeout(() => {
-            window.location.href = "/admin";
-          }, 1500);
+          toast.success("Đăng nhập thành công! Đang xác định vai trò...");
+
+          const stripDiacritics = (s) =>
+            (s || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+
+          // Fetch role name and redirect accordingly
+          fetchGet(
+            `/api/Accounts/${result.accountId}/rolename`,
+            (roleRes) => {
+              let roleName = "";
+              if (typeof roleRes === "string") roleName = roleRes;
+              else if (roleRes && typeof roleRes === "object") {
+                roleName = roleRes.roleName || roleRes.name || JSON.stringify(roleRes);
+              }
+              localStorage.setItem("roleName", roleName);
+
+              const norm = stripDiacritics(roleName).toLowerCase();
+
+              // Roles that should go to admin area
+              if (norm.includes("giao vien") || norm.includes("quan li") || norm.includes("admin") || norm.includes("quanli")) {
+                toast.success("Xin chào! Chuyển đến trang quản trị...");
+                setTimeout(() => (window.location.href = "/admin"), 900);
+                return;
+              }
+
+              // Student
+              if (norm.includes("hoc sinh") || norm.includes("hocsinh") || norm.includes("student")) {
+                toast.success("Chuyển đến trang học sinh...");
+                setTimeout(() => (window.location.href = "/student"), 900);
+                return;
+              }
+
+              // Parent
+              if (norm.includes("phu huynh") || norm.includes("phuhuynh") || norm.includes("parent")) {
+                toast.success("Chuyển đến trang phụ huynh...");
+                setTimeout(() => (window.location.href = "/parent"), 900);
+                return;
+              }
+
+              // Default fallback
+              toast.info("Vai trò không xác định. Chuyển đến trang chính.");
+              setTimeout(() => (window.location.href = "/admin"), 900);
+            },
+            (err) => {
+              toast.error("Không lấy được vai trò. Chuyển hướng mặc định...");
+              setTimeout(() => (window.location.href = "/admin"), 900);
+            }
+          );
         } else {
           toast.error(result.message || "Đăng nhập thất bại!");
         }

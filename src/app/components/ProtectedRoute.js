@@ -1,9 +1,11 @@
 import React from 'react';
 import { Navigate, Outlet } from 'react-router-dom';
+import { getToken } from '../lib/auth';
 
 const ProtectedRoute = () => {
-    const token = localStorage.getItem('token');
-    const isLoggedIn = !!token; // Kiểm tra token tồn tại
+    // Support multiple possible storage keys used across the app
+    const token = getToken() || localStorage.getItem('jwtToken') || localStorage.getItem('accessToken') || localStorage.getItem('token');
+    const isLoggedIn = !!token;
 
     return isLoggedIn ? <Outlet /> : <Navigate to="/login" replace />;
 };
