@@ -23,7 +23,7 @@ export default function AccountManagementStudent() {
 
   const [userId, setUserId] = useState("");
   const [accountId, setAccountId] = useState("");
-  const [newPassword, setNewPassword] = useState("");
+  const [Password, setNewPassword] = useState("");
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -94,9 +94,9 @@ export default function AccountManagementStudent() {
 
   const handleUpdatePassword = () => {
     if (!accountId) return toast.error("Không xác định được tài khoản");
-    if (!newPassword) return toast.error("Vui lòng nhập mật khẩu mới");
+    if (!Password) return toast.error("Vui lòng nhập mật khẩu mới");
 
-    fetchPut("/api/accounts", { id: accountId, newPassword }, () => {
+    fetchPut("/api/accounts", { id: accountId, Password }, () => {
       toast.success("Đổi mật khẩu thành công!");
       setNewPassword("");
     }, (err) => toast.error(err.message || "Đổi mật khẩu thất bại"));
@@ -199,7 +199,7 @@ export default function AccountManagementStudent() {
               <label>Mật khẩu mới:</label>
               <input
                 type="password"
-                value={newPassword}
+                value={Password}
                 onChange={(e) => setNewPassword(e.target.value)}
                 placeholder="Nhập mật khẩu mới để thay đổi"
                 className="form-input"

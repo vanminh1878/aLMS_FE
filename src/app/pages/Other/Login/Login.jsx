@@ -46,7 +46,6 @@ export default function Login() {
           localStorage.setItem("accessToken", result.accessToken);
           localStorage.setItem("refreshToken", result.refreshToken || "");
           localStorage.setItem("accountId", result.accountId);
-          toast.success("Đăng nhập thành công! Đang xác định vai trò...");
 
           const stripDiacritics = (s) =>
             (s || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "");
@@ -66,7 +65,6 @@ export default function Login() {
 
               // Roles that should go to admin area
               if (norm.includes("giao vien") || norm.includes("quan li") || norm.includes("admin") || norm.includes("quanli")) {
-                toast.success("Xin chào! Chuyển đến trang quản trị...");
                 setTimeout(() => (window.location.href = "/admin"), 900);
                 return;
               }

@@ -19,7 +19,7 @@ export default function AccountManagement() {
 
   const [userId, setUserId] = useState("");     // User ID để update user
   const [accountId, setAccountId] = useState(""); // Account ID để update password
-  const [newPassword, setNewPassword] = useState("");
+  const [Password, setNewPassword] = useState("");
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -140,7 +140,7 @@ export default function AccountManagement() {
 
     const payload = {
       id: accountId, // Truyền accountId trong payload
-      newPassword: newPassword,
+      Password: Password,
     };
 
     console.log("Payload đổi mật khẩu:", payload);
@@ -296,7 +296,7 @@ export default function AccountManagement() {
               <label>Mật khẩu mới:</label>
               <input
                 type="password"
-                value={newPassword}
+                value={Password}
                 onChange={(e) => setNewPassword(e.target.value)}
                 placeholder="Nhập mật khẩu mới"
                 className="form-input"
