@@ -1,5 +1,6 @@
 // src/components/Student/StudentSubjectLearning/StudentSubjectLearning.jsx
 import React, { useState, useEffect } from "react";
+import { useNavigate, useLocation, Outlet } from "react-router-dom";
 import {
   Box,
   Typography,
@@ -9,24 +10,32 @@ import {
   AccordionDetails,
   Paper,
   CircularProgress,
-  Alert,
-  Avatar,
-  Chip,
   LinearProgress,
+  Alert,
+  IconButton,
+  Menu,
+  MenuItem,
+  Divider,
+  Avatar,
 } from "@mui/material";
-import TopicIcon from '@mui/icons-material/Topic';
+import TopicIcon from "@mui/icons-material/Topic";
 import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import SchoolIcon from "@mui/icons-material/School";
 import MenuBookIcon from "@mui/icons-material/MenuBook";
-import StarIcon from "@mui/icons-material/Star";
+import AccountCircleIcon from "@mui/icons-material/AccountCircle";
+import LogoutIcon from "@mui/icons-material/Logout";
 import { motion } from "framer-motion";
 import { toast } from "react-toastify";
+import { sIsLoggedIn } from "../../../store.js";
 
 import { fetchGet, BE_ENPOINT } from "../../lib/httpHandler.js";
 import TopicListStudent from "./TopicListStudent.jsx";
 import TopicDetailStudent from "./TopicDetailStudent.jsx";
 
 const StudentSubjectLearning = ({ onClose }) => {
+  const navigate = useNavigate();
+  const location = useLocation();
+
   const [classes, setClasses] = useState([]);
   const [subjects, setSubjects] = useState({});
   const [topics, setTopics] = useState({});
@@ -41,11 +50,33 @@ const StudentSubjectLearning = ({ onClose }) => {
 
   const [studentInfo, setStudentInfo] = useState({
     name: "Đang tải...",
-    stars: 0,
-    level: 0,
   });
 
   const [studentId, setStudentId] = useState(null);
+
+  // Menu avatar
+  const [anchorEl, setAnchorEl] = useState(null);
+
+  const handleMenuOpen = (event) => {
+    setAnchorEl(event.currentTarget);
+  };
+
+  const handleMenuClose = () => {
+    setAnchorEl(null);
+  };
+
+  const handleOpenAccountManagement = () => {
+    navigate("/student/account-management");
+    handleMenuClose();
+  };
+
+  // Đăng xuất
+  const handleLogout = () => {
+    localStorage.removeItem("jwtToken");
+    sIsLoggedIn.set(false);
+    navigate("/login");
+  };
+
 
   useEffect(() => {
     const accountId = localStorage.getItem("accountId");
@@ -63,8 +94,6 @@ const StudentSubjectLearning = ({ onClose }) => {
         setStudentId(userData.id);
         setStudentInfo({
           name: userData.name || "Học sinh",
-          stars: userData.stars || 0,
-          level: userData.level || 1,
         });
         setLoadingUser(false);
       },
@@ -135,15 +164,11 @@ const StudentSubjectLearning = ({ onClose }) => {
         },
       });
 
-      if (!res.ok) {
-        const errData = await res.json().catch(() => ({}));
-        throw new Error(errData.title || "Không thể tải môn học");
-      }
+      if (!res.ok) throw new Error("Không thể tải môn học");
 
       const data = await res.json();
       setSubjects((prev) => ({ ...prev, [classId]: data || [] }));
     } catch (err) {
-      console.error(`Lỗi fetch subjects cho lớp ${classId}:`, err);
       toast.error(err.message || "Lỗi tải môn học");
       setSubjects((prev) => ({ ...prev, [classId]: [] }));
     } finally {
@@ -165,15 +190,11 @@ const StudentSubjectLearning = ({ onClose }) => {
         },
       });
 
-      if (!res.ok) {
-        const errData = await res.json().catch(() => ({}));
-        throw new Error(errData.title || "Không thể tải chủ đề");
-      }
+      if (!res.ok) throw new Error("Không thể tải chủ đề");
 
       const data = await res.json();
       setTopics((prev) => ({ ...prev, [subjectId]: data || [] }));
     } catch (err) {
-      console.error(`Lỗi fetch topics cho môn ${subjectId}:`, err);
       toast.error(err.message || "Lỗi tải chủ đề");
       setTopics((prev) => ({ ...prev, [subjectId]: [] }));
     } finally {
@@ -199,6 +220,7 @@ const StudentSubjectLearning = ({ onClose }) => {
     setSelectedTopic(topic);
   };
 
+  // Loading toàn bộ thông tin user
   if (loadingUser) {
     return (
       <Box display="flex" justifyContent="center" alignItems="center" minHeight="100vh" flexDirection="column" bgcolor="#f8fafc">
@@ -210,9 +232,17 @@ const StudentSubjectLearning = ({ onClose }) => {
     );
   }
 
+  // Nếu đang ở trang quản lý thông tin cá nhân → chỉ render Outlet (AccountManagementStudent)
+  const isAccountManagementPage = location.pathname === "/student/account-management";
+
+  if (isAccountManagementPage) {
+    return <Outlet />;
+  }
+
+  // Ngược lại: hiển thị layout thư viện học tập bình thường
   return (
     <Box minHeight="100vh" bgcolor="#f8fafc">
-      {/* Hero Header */}
+      {/* Header cố định */}
       <Box
         sx={{
           background: "linear-gradient(120deg, #667eea 0%, #764ba2 100%)",
@@ -222,6 +252,7 @@ const StudentSubjectLearning = ({ onClose }) => {
           borderBottomLeftRadius: { xs: 30, md: 60 },
           borderBottomRightRadius: { xs: 30, md: 60 },
           boxShadow: "0 20px 40px rgba(0,0,0,0.1)",
+          position: "relative",
         }}
       >
         <Stack direction={{ xs: "column", md: "row" }} justifyContent="space-between" alignItems="center" spacing={4}>
@@ -238,37 +269,50 @@ const StudentSubjectLearning = ({ onClose }) => {
             <Typography variant="h5" gutterBottom>
               Xin chào, <strong>{studentInfo.name}</strong>!
             </Typography>
-            <Stack direction="row" spacing={3} justifyContent={{ xs: "center", md: "flex-end" }} mt={2}>
-              <Chip
-                icon={<StarIcon />}
-                label={`${studentInfo.stars} sao`}
-                color="warning"
-                variant="filled"
-                sx={{ fontSize: "1.1rem", py: 3, px: 2 }}
-              />
-              <Chip
-                label={`Cấp ${studentInfo.level}`}
-                color="primary"
-                variant="filled"
-                sx={{ fontSize: "1.1rem", py: 3, px: 2 }}
-              />
-            </Stack>
           </Box>
         </Stack>
+
+        {/* Avatar Menu */}
+        <IconButton
+          onClick={handleMenuOpen}
+          sx={{
+            position: "absolute",
+            top: 16,
+            right: 24,
+            bgcolor: "rgba(255,255,255,0.15)",
+            "&:hover": { bgcolor: "rgba(255,255,255,0.25)" },
+          }}
+        >
+          <Avatar sx={{ width: 48, height: 48, bgcolor: "white", color: "#667eea" }}>
+            <AccountCircleIcon fontSize="large" />
+          </Avatar>
+        </IconButton>
+
+        <Menu
+          anchorEl={anchorEl}
+          open={Boolean(anchorEl)}
+          onClose={handleMenuClose}
+          PaperProps={{
+            sx: { borderRadius: 3, boxShadow: "0 10px 30px rgba(0,0,0,0.15)", mt: 1 },
+          }}
+        >
+          <MenuItem onClick={handleOpenAccountManagement}>
+            <AccountCircleIcon sx={{ mr: 2, color: "text.secondary" }} />
+            Quản lý thông tin cá nhân
+          </MenuItem>
+          <Divider />
+          <MenuItem onClick={handleLogout}>
+            <LogoutIcon sx={{ mr: 2, color: "error.main" }} />
+            <Typography color="error">Đăng xuất</Typography>
+          </MenuItem>
+        </Menu>
       </Box>
 
+      {/* Nội dung thư viện học tập */}
       <Box display="flex" flexDirection={{ xs: "column", md: "row" }} gap={6} px={{ xs: 4, md: 8 }} py={8}>
-        {/* Left Sidebar - Class Selection */}
+        {/* Sidebar chọn lớp */}
         <Box width={{ xs: "100%", md: 380 }}>
-          <Paper
-            elevation={12}
-            sx={{
-              borderRadius: 4,
-              overflow: "hidden",
-              bgcolor: "white",
-              boxShadow: "0 10px 30px rgba(0,0,0,0.08)",
-            }}
-          >
+          <Paper elevation={12} sx={{ borderRadius: 4, overflow: "hidden", bgcolor: "white", boxShadow: "0 10px 30px rgba(0,0,0,0.08)" }}>
             <Box bgcolor="#667eea" color="white" p={3}>
               <Typography variant="h5" fontWeight={700}>
                 <MenuBookIcon sx={{ mr: 1.5, verticalAlign: "middle" }} />
@@ -320,11 +364,7 @@ const StudentSubjectLearning = ({ onClose }) => {
                         ) : (
                           <Stack spacing={1.5}>
                             {(subjects[cls.id] || []).map((subject) => (
-                              <motion.div
-                                key={subject.id}
-                                whileHover={{ x: 10 }}
-                                whileTap={{ scale: 0.98 }}
-                              >
+                              <motion.div key={subject.id} whileHover={{ x: 10 }} whileTap={{ scale: 0.98 }}>
                                 <Box
                                   onClick={() => handleSelectSubject(subject)}
                                   sx={{
@@ -363,14 +403,10 @@ const StudentSubjectLearning = ({ onClose }) => {
           </Paper>
         </Box>
 
-        {/* Right Content Area */}
+        {/* Nội dung bên phải */}
         <Box flex={1}>
           {selectedSubject ? (
-            <motion.div
-              initial={{ opacity: 0, y: 30 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6 }}
-            >
+            <motion.div initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6 }}>
               <Typography variant="h4" fontWeight={800} mb={5} color="#667eea">
                 <TopicIcon sx={{ fontSize: 48, mr: 2, verticalAlign: "middle" }} />
                 {selectedSubject.name}

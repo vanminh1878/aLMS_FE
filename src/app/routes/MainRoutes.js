@@ -14,6 +14,7 @@ import DepartmentManagement from "../pages/Admin/DepartmentManagement/Department
 import RoleManagement from "../pages/Admin/RoleManagement/RoleManagement.jsx";
 import BehaviourManagement from "../pages/Admin/BehaviourManagement/BehaviourManagement.jsx";
 import AccountManagement from "../pages/Admin/AccountManagement/AccountManagement.jsx";
+import AccountManagementStudent from "../pages/Student/AccountManagement/AccountManagement.jsx";
 
 
 // === TRANG AUTH ===
@@ -54,6 +55,7 @@ export default function MainRoutes() {
           </Route>
           {/* Trang chủ student */}
           <Route path="/student" element={<StudentPage />} >
+           <Route path="/student/account-management" element={<AccountManagementStudent />} />
           </Route>
         </Route>
 
