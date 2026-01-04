@@ -208,10 +208,8 @@ export default function Login() {
               <Link href="#" underline="hover" className="forgot-link">
                 Quên mật khẩu?
               </Link>
-              <Divider sx={{ my: 2 }}>HOẶC</Divider>
-              <Link href="/register" className="register-link">
-                Tạo tài khoản mới
-              </Link>
+
+  
             </Box>
           </Box>
         </Paper>

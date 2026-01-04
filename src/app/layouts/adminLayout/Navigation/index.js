@@ -16,7 +16,7 @@ import Logo from "../../../assets/icons/logo_LMS.png";
 
 export default function Navigation() {
   const navigation = [
-    { name: "Dashboard", path: "/admin", icon: <RxDashboard className="fs-5 icon" /> },
+    { name: "Dashboard", path: "/admin/statistic-management", icon: <RxDashboard className="fs-5 icon" /> },
     
     // Quản lý cơ sở
     { name: "Quản lý Trường học", path: "/admin/school-management", icon: <FaSchool className="fs-5 icon" /> },

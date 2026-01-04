@@ -1,9 +1,9 @@
-/* src/app/pages/Auth/Login/Login.css - VINTAGE SIÊU MỊN */
+/* src/app/pages/Auth/Login/Login.css - PHIÊN BẢN XANH DƯƠNG NHẠT SIÊU MỊN */
 
-/* BACKGROUND + TEXTURE giữ nguyên */
+/* BACKGROUND + TEXTURE (đã chỉnh gradient sang tông xanh nhạt) */
 .login-container-vintage {
   min-height: 100vh;
-  background: linear-gradient(135deg, #f5e6d3 0%, #e2d5c2 50%, #d4c4a9 100%);
+  background: linear-gradient(135deg, #e0f7fa 0%, #b2ebf2 50%, #80deea 100%);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -35,13 +35,13 @@
   min-height: 480px !important;
   border-radius: 20px !important;
   overflow: hidden;
-  background: #faf6f0;
+  background: #f0fbff;
   box-shadow: 
-    0 15px 45px rgba(139, 69, 19, 0.3),
-    0 0 0 10px #8b4513 inset,
-    0 0 0 16px #faf6f0 inset;
+    0 15px 45px rgba(0, 105, 112, 0.3),
+    0 0 0 10px #006064 inset,
+    0 0 0 16px #f0fbff inset;
   position: relative;
-  border: 4px solid #8b4513;
+  border: 4px solid #006064;
   animation: cardAppear 1.2s ease-out;
 }
 
@@ -54,8 +54,8 @@
 .login-header {
   text-align: center;
   padding: 32px 40px 24px;
-  background: linear-gradient(to bottom, #d2691e, #a0522d);
-  color: #fff8dc;
+  background: linear-gradient(to bottom, #00acc1, #00838f);
+  color: #e1f5fe;
   position: relative;
 }
 
@@ -66,7 +66,7 @@
   left: 0;
   right: 0;
   height: 8px;
-  background: repeating-linear-gradient(90deg, #8b4513 0px, #8b4513 12px, #a0522d 12px, #a0522d 24px);
+  background: repeating-linear-gradient(90deg, #006064 0px, #006064 12px, #00838f 12px, #00838f 24px);
   opacity: 0.4;
 }
 
@@ -75,20 +75,20 @@
   font-weight: 900 !important;
   font-size: 2.6rem !important;
   letter-spacing: 5px;
-  color: #fff8dc;
-  text-shadow: 2px 2px 0 #8b4513;
+  color: #e1f5fe;
+  text-shadow: 2px 2px 0 #006064;
 }
 
 .login-header svg {
   font-size: 64px !important;
   filter: drop-shadow(0 4px 8px rgba(0,0,0,0.4));
-  color: #fff8dc;
+  color: #e1f5fe;
 }
 
 /* FORM */
 .login-form {
   padding: 28px 48px 36px !important;
-  background: #faf6f0;
+  background: #f0fbff;
 }
 
 .login-input {
@@ -99,36 +99,36 @@
 .login-input .MuiOutlinedInput-root {
   border-radius: 10px;
   font-size: 1.15rem;
-  background: #fff8dc;
-  border: 2.5px solid #8b4513 !important; /* CHỈ 1 Viền */
+  background: #e1f5fe;
+  border: 2.5px solid #006064 !important; /* CHỈ 1 Viền */
   font-family: 'Courier New', monospace;
   font-weight: normal !important; /* BỎ IN ĐẬM */
-  color: #5d4037;
+  color: #004d40;
   padding: 0 !important;
 }
 
 .login-input .MuiOutlinedInput-root:hover {
-  background: #ffebcd;
-  border-color: #a0522d !important;
-  box-shadow: 0 0 0 3px rgba(160, 82, 45, 0.2);
+  background: #b3e5fc;
+  border-color: #00838f !important;
+  box-shadow: 0 0 0 3px rgba(0, 131, 143, 0.2);
 }
 
 .login-input .MuiInputLabel-root {
-  color: #8b4513 !important;
+  color: #006064 !important;
   font-weight: normal !important; /* BỎ IN ĐẬM LABEL */
   font-size: 1rem;
 }
 
 .login-input .MuiOutlinedInput-input {
-  color: #5d4037 !important;
+  color: #004d40 !important;
   padding: 14px 16px !important;
   font-weight: normal !important;
 }
 
 /* FOCUS MỊN */
 .login-input .MuiOutlinedInput-root.Mui-focused {
-  border-color: #8b4513 !important;
-  box-shadow: 0 0 0 4px rgba(139, 69, 19, 0.25);
+  border-color: #006064 !important;
+  box-shadow: 0 0 0 4px rgba(0, 105, 112, 0.25);
 }
 
 /* BUTTON */
@@ -139,20 +139,20 @@
   font-size: 1.25rem !important;
   font-weight: 900 !important;
   letter-spacing: 2.5px;
-  background: linear-gradient(to bottom, #d2691e, #a0522d) !important;
-  color: #fff8dc !important;
-  border: 3px solid #8b4513;
-  box-shadow: 0 7px 0 #8b4513, 0 10px 18px rgba(0,0,0,0.3) !important;
+  background: linear-gradient(to bottom, #00acc1, #00838f) !important;
+  color: #e1f5fe !important;
+  border: 3px solid #006064;
+  box-shadow: 0 7px 0 #006064, 0 10px 18px rgba(0,0,0,0.3) !important;
 }
 
 .login-button:hover {
   transform: translateY(3px);
-  box-shadow: 0 4px 0 #8b4513, 0 7px 14px rgba(0,0,0,0.3) !important;
+  box-shadow: 0 4px 0 #006064, 0 7px 14px rgba(0,0,0,0.3) !important;
 }
 
 .login-button:active {
   transform: translateY(7px);
-  box-shadow: 0 0 0 #8b4513 !important;
+  box-shadow: 0 0 0 #006064 !important;
 }
 
 /* FOOTER */
@@ -164,7 +164,7 @@
 
 .forgot-link,
 .register-link {
-  color: #8b4513 !important;
+  color: #006064 !important;
   font-weight: normal !important; /* BỎ IN ĐẬM */
   text-decoration: underline dotted;
 }
