@@ -15,7 +15,7 @@ import RoleManagement from "../pages/Admin/RoleManagement/RoleManagement.jsx";
 import BehaviourManagement from "../pages/Admin/BehaviourManagement/BehaviourManagement.jsx";
 import AccountManagement from "../pages/Admin/AccountManagement/AccountManagement.jsx";
 import AccountManagementStudent from "../pages/Student/AccountManagement/AccountManagement.jsx";
-
+import StatisticMnagement from "../pages/Admin/StatisticManagement/StatisticManagement.jsx";
 
 // === TRANG AUTH ===
 import Login from "../pages/Other/Login/Login";
@@ -42,7 +42,7 @@ export default function MainRoutes() {
           <Route path="/admin" element={<LayoutAdmin />}>
             {/* Trang chủ admin - redirect về class-management */}
             <Route index element={<Navigate to="class-management" replace />} />
-
+            <Route path="statistic-management" element={<StatisticMnagement />} />
             <Route path="school-management" element={<SchoolManagement />} />
             <Route path="class-management" element={<ClassManagement />} />
             <Route path="student-management" element={<StudentManagement />} />
