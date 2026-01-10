@@ -55,7 +55,20 @@ export default function Navigation() {
               className="inner-image"
               alt="LMS Pro Logo"
             />
-            <span className="fs-4 inner-title fw-bold text-primary">Hệ thống quản lí học tập</span>
+           <span 
+  className="fs-4 inner-title fw-bold"
+  style={{
+    background: 'linear-gradient(90deg, #10b981, #059669, #047857)',
+    WebkitBackgroundClip: 'text',
+    WebkitTextFillColor: 'transparent',
+    backgroundClip: 'text',
+    textShadow: '0 2px 12px rgba(79, 70, 229, 0.25)',
+    letterSpacing: '-0.5px',
+    fontFamily: "'Inter', system-ui, -apple-system, sans-serif"
+  }}
+>
+   HỆ THỐNG QUẢN LÍ HỌC TẬP
+</span>
           </a>
           <hr className="text-secondary mt-3" />
           

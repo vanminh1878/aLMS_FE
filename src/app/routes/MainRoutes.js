@@ -43,7 +43,7 @@ export default function MainRoutes() {
         <Route element={<ProtectedRoute />}>
           <Route path="/admin" element={<LayoutAdmin />}>
             {/* Trang chủ admin - redirect về class-management */}
-            <Route index element={<Navigate to="class-management" replace />} />
+            <Route index element={<Navigate to="statistic-management" replace />} />
             <Route path="statistic-management" element={<StatisticMnagement />} />
             <Route path="school-management" element={<SchoolManagement />} />
             <Route path="class-management" element={<ClassManagement />} />

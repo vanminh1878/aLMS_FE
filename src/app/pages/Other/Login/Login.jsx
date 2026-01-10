@@ -98,7 +98,7 @@ export default function Login() {
         setLoading(false);
       },
       (error) => {
-        toast.error(error.message || "Lỗi kết nối máy chủ!");
+        toast.error(error.message || "Mật khẩu chưa chính xác!");
         setLoading(false);
       }
     );

@@ -15,6 +15,9 @@ import {
   Tooltip,
   Legend,
 } from "chart.js";
+import {
+  Typography,
+} from "@mui/material";
 import ChartDataLabels from "chartjs-plugin-datalabels";
 
 import styles from "./StatisticManagement.module.css";
@@ -302,7 +305,22 @@ export default function StatisticManagement() {
     <>
       <ToastContainer />
       <div className={styles.container}>
-        <h2 className={styles.pageTitle}>Thống Kê Trường Học</h2>
+        <Typography 
+  className="page-title"
+  sx={{
+    fontSize: { xs: '2rem', md: '2.5rem' },
+    fontWeight: 800,
+    background: 'linear-gradient(90deg, #1e40af, #3b82f6)',
+    WebkitBackgroundClip: 'text',
+    backgroundClip: 'text',
+    WebkitTextFillColor: 'transparent',
+    letterSpacing: '-0.8px',
+    marginBottom: '2.5rem',
+    textAlign: { xs: 'center', md: 'left' }
+  }}
+>
+  Thống Kê Trường Học
+</Typography>
 
         {/* Giáo viên theo bộ môn */}
         <div className={`${styles.statCard} ${styles.chartCard}`}>

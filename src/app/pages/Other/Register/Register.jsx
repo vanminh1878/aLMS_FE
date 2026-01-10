@@ -26,7 +26,6 @@ export default function Register() {
         setStores(response);
       },
       () => {
-        toast.error("Không thể tải danh sách cửa hàng!");
       }
     );
   }, []);

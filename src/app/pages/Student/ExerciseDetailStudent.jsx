@@ -162,7 +162,7 @@ const ExerciseDetailStudent = ({ exerciseId, onBack }) => {
 
       setStudentExerciseId(id);
       setStarted(true);
-      toast.success("Bắt đầu làm bài thành công!");
+ 
     } catch (err) {
       toast.error(err.message || "Không thể bắt đầu bài tập.");
       console.error("Start error:", err);

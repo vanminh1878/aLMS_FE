@@ -1,4 +1,3 @@
-// src/components/Admin/TeacherManagement/TeacherManagement.jsx
 import React, { useEffect, useState, useMemo, useCallback } from "react";
 import {
   Box,
@@ -10,10 +9,16 @@ import {
   Chip,
   Tooltip,
   IconButton,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  Alert,
 } from "@mui/material";
 import { DataGrid } from "@mui/x-data-grid";
 import SearchIcon from "@mui/icons-material/Search";
 import AddIcon from "@mui/icons-material/Add";
+import UploadFileIcon from "@mui/icons-material/UploadFile";
 import VisibilityIcon from "@mui/icons-material/Visibility";
 import BlockIcon from "@mui/icons-material/Block";
 import CheckCircleIcon from "@mui/icons-material/CheckCircle";
@@ -23,7 +28,7 @@ import DetailTeacher from "../../../components/Admin/TeacherManagement/DetailTea
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 
-import { fetchGet, fetchPut } from "../../../lib/httpHandler.js";
+import { fetchGet, fetchPostFormData, fetchPut } from "../../../lib/httpHandler.js";
 import { showYesNoMessageBox } from "../../../components/MessageBox/YesNoMessageBox/showYesNoMessgeBox.js";
 import "./TeacherManagement.css";
 
@@ -34,9 +39,60 @@ export default function TeacherManagement({ predefinedDepartmentId }) {
   const [openDetail, setOpenDetail] = useState(false);
   const [selectedTeacher, setSelectedTeacher] = useState(null);
   const [openAddTeacher, setOpenAddTeacher] = useState(false);
+  const [openExcelDialog, setOpenExcelDialog] = useState(false);
+  const [excelFile, setExcelFile] = useState(null);
+  const [excelUploading, setExcelUploading] = useState(false);
+  const [schoolId, setSchoolId] = useState(null);
+  const [schoolName, setSchoolName] = useState("");
 
   const departmentId = predefinedDepartmentId;
 
+  // Tải thông tin trường học của user hiện tại
+  const loadSchoolInfo = useCallback(async () => {
+    const accountId = localStorage.getItem("accountId");
+    if (!accountId) {
+      toast.error("Phiên đăng nhập hết hạn");
+      return;
+    }
+
+    try {
+      const user = await new Promise((resolve, reject) => {
+        fetchGet(
+          `/api/accounts/by-account/${accountId}`,
+          resolve,
+          reject,
+          () => reject(new Error("Network error"))
+        );
+      });
+
+      if (!user || !user.schoolId) {
+        toast.error("Không tìm thấy trường học của bạn");
+        return;
+      }
+
+      const school = await new Promise((resolve, reject) => {
+        fetchGet(
+          `/api/schools/${user.schoolId}`,
+          resolve,
+          reject,
+          () => reject(new Error("Failed to fetch school"))
+        );
+      });
+
+      if (!school || !school.name) {
+        toast.error("Không tải được thông tin trường");
+        return;
+      }
+
+      setSchoolId(user.schoolId);
+      setSchoolName(school.name);
+    } catch (error) {
+      console.error("Lỗi tải thông tin trường:", error);
+      toast.error("Không thể tải thông tin trường học");
+    }
+  }, []);
+
+  // Tải danh sách giáo viên
   const fetchTeachers = useCallback(async () => {
     if (!departmentId) {
       setTeachers([]);
@@ -50,8 +106,7 @@ export default function TeacherManagement({ predefinedDepartmentId }) {
         fetchGet(
           `/api/teacher-profiles/by-department/${departmentId}`,
           (data) => resolve(data),
-          (error) => reject(error),
-          () => reject(new Error("Network error"))
+          (error) => reject(error)
         );
       });
 
@@ -59,40 +114,28 @@ export default function TeacherManagement({ predefinedDepartmentId }) {
 
       const detailedTeachers = await Promise.all(
         profiles.map(async (profile) => {
-          const userId = profile.userId;
-
-          const userRes = await new Promise((resolve, reject) => {
-            fetchGet(
-              `/api/users/${userId}`,
-              resolve,
-              reject,
-              () => reject(new Error("Lỗi tải user"))
-            );
+          const user = await new Promise((resolve, reject) => {
+            fetchGet(`/api/users/${profile.userId}`, resolve, reject);
           });
 
-          const accountRes = await new Promise((resolve, reject) => {
-            fetchGet(
-              `/api/accounts/${userRes.accountId}`,
-              resolve,
-              reject,
-              () => reject(new Error("Lỗi tải account"))
-            );
+          const account = await new Promise((resolve, reject) => {
+            fetchGet(`/api/accounts/${user.accountId}`, resolve, reject);
           });
 
           return {
-            id: userId,
-            fullName: userRes.name || "Chưa có tên",
-            email: userRes.email || "Chưa có",
-            phone: userRes.phoneNumber || "Chưa có",
+            id: profile.userId,
+            fullName: user.name || "Chưa có tên",
+            email: user.email || "Chưa có",
+            phone: user.phoneNumber || "Chưa có",
             specialization: profile.specialization || "Chưa xác định",
             hireDate: profile.hireDate
               ? new Date(profile.hireDate).toLocaleDateString("vi-VN")
               : "Chưa có",
-            address: userRes.address || "Chưa có",
-            username: accountRes.username || "Chưa có",
-            status: accountRes.status ?? true,
-            accountId: accountRes.id,
-            userData: userRes,
+            address: user.address || "Chưa có",
+            username: account.username || "Chưa có",
+            status: account.status ?? true,
+            accountId: account.id,
+            userData: user,
             profileData: profile,
           };
         })
@@ -109,8 +152,9 @@ export default function TeacherManagement({ predefinedDepartmentId }) {
   }, [departmentId]);
 
   useEffect(() => {
+    loadSchoolInfo();
     fetchTeachers();
-  }, [fetchTeachers]);
+  }, [loadSchoolInfo, fetchTeachers]);
 
   const filteredTeachers = useMemo(() => {
     if (!searchTerm.trim()) return teachers;
@@ -123,6 +167,56 @@ export default function TeacherManagement({ predefinedDepartmentId }) {
         t.specialization.toLowerCase().includes(term)
     );
   }, [teachers, searchTerm]);
+
+  // Xử lý upload Excel
+  const handleExcelUpload = async () => {
+    if (!excelFile) {
+      toast.warning("Vui lòng chọn file Excel");
+      return;
+    }
+
+    if (!excelFile.name.endsWith(".xlsx")) {
+      toast.error("Chỉ hỗ trợ file .xlsx");
+      return;
+    }
+
+    if (!schoolId) {
+      toast.error("Không tìm thấy SchoolId. Vui lòng tải lại trang");
+      return;
+    }
+
+    setExcelUploading(true);
+
+    try {
+      const formData = new FormData();
+      formData.append("file", excelFile);
+      formData.append("schoolId", schoolId);
+
+      const result = await new Promise((resolve, reject) => {
+        fetchPostFormData(
+          `/api/schools/${schoolId}/departments/${departmentId}/add-teachers/excel`,
+          formData,
+          (data) => resolve(data),
+          (err) => reject(err)
+        );
+      });
+
+      if (result.success || result.Success) {
+        toast.success(result.message || "Thêm giáo viên từ Excel thành công!");
+        fetchTeachers(); // Refresh danh sách
+      } else {
+        toast.error(result.message || "Có lỗi xảy ra khi thêm giáo viên");
+      }
+
+      setOpenExcelDialog(false);
+      setExcelFile(null);
+    } catch (error) {
+      console.error("Lỗi upload Excel:", error);
+      toast.error(error.detail || error.message || "Không thể upload file Excel");
+    } finally {
+      setExcelUploading(false);
+    }
+  };
 
   const handleOpenDetail = (teacher) => {
     setSelectedTeacher(teacher);
@@ -220,14 +314,33 @@ export default function TeacherManagement({ predefinedDepartmentId }) {
           }}
           sx={{ width: 450 }}
         />
-        <Button
-          variant="contained"
-          startIcon={<AddIcon />}
-          onClick={() => setOpenAddTeacher(true)}
-        >
-          Thêm giáo viên
-        </Button>
+
+        <Box sx={{ display: "flex", gap: 1 }}>
+          <Button
+            variant="contained"
+            startIcon={<AddIcon />}
+            onClick={() => setOpenAddTeacher(true)}
+          >
+            Thêm giáo viên
+          </Button>
+
+          <Button
+            variant="outlined"
+            color="primary"
+            startIcon={<UploadFileIcon />}
+            onClick={() => setOpenExcelDialog(true)}
+          >
+            Thêm bằng Excel
+          </Button>
+        </Box>
       </Box>
+
+      {/* Hiển thị tên trường (tùy chọn) */}
+      {schoolName && (
+        <Typography variant="subtitle2" color="text.secondary" sx={{ mt: 1, mb: 2 }}>
+          Trường: {schoolName}
+        </Typography>
+      )}
 
       <Box className="table-container">
         {loading ? (
@@ -249,19 +362,70 @@ export default function TeacherManagement({ predefinedDepartmentId }) {
         )}
       </Box>
 
+      {/* Dialog thêm giáo viên đơn */}
       <AddTeacher
         open={openAddTeacher}
         onClose={() => setOpenAddTeacher(false)}
         departmentId={departmentId}
-        onSuccess={() => fetchTeachers()}
+        schoolId={schoolId} // Truyền thêm nếu AddTeacher cần SchoolId
+        onSuccess={() => {
+          fetchTeachers();
+          setOpenAddTeacher(false);
+        }}
       />
 
+      {/* Dialog xem chi tiết */}
       <DetailTeacher
         open={openDetail}
         onClose={handleCloseDetail}
         teacher={selectedTeacher}
-        onUpdateSuccess={() => fetchTeachers()}   // Refresh list sau khi edit thành công
+        onUpdateSuccess={() => fetchTeachers()}
       />
+
+      {/* Dialog upload Excel */}
+      <Dialog open={openExcelDialog} onClose={() => setOpenExcelDialog(false)} maxWidth="sm" fullWidth>
+        <DialogTitle>Thêm giáo viên bằng file Excel</DialogTitle>
+        <DialogContent dividers>
+          <Alert severity="info" sx={{ mb: 2 }}>
+            Vui lòng sử dụng template Excel đúng định dạng (bắt đầu dữ liệu từ hàng 5).<br />
+            Tải template mẫu <a href="/templates/add-teachers-template.xlsx" download>mẫu tại đây</a>
+          </Alert>
+
+          <Box sx={{ mt: 2 }}>
+            <Button
+              variant="outlined"
+              component="label"
+              fullWidth
+              startIcon={<UploadFileIcon />}
+            >
+              Chọn file Excel (.xlsx)
+              <input
+                type="file"
+                hidden
+                accept=".xlsx"
+                onChange={(e) => setExcelFile(e.target.files[0])}
+              />
+            </Button>
+
+            {excelFile && (
+              <Typography variant="body2" sx={{ mt: 1 }}>
+                Đã chọn: <strong>{excelFile.name}</strong> ({(excelFile.size / 1024).toFixed(1)} KB)
+              </Typography>
+            )}
+          </Box>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setOpenExcelDialog(false)}>Hủy</Button>
+          <Button
+            variant="contained"
+            onClick={handleExcelUpload}
+            disabled={excelUploading || !excelFile}
+            startIcon={excelUploading ? <CircularProgress size={20} /> : null}
+          >
+            {excelUploading ? "Đang xử lý..." : "Upload & Thêm"}
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 }

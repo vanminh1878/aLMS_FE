@@ -14,10 +14,12 @@ import {
   DialogContent,
   DialogActions,
   Divider,
+  Alert,
 } from "@mui/material";
 import { DataGrid } from "@mui/x-data-grid";
 import SearchIcon from "@mui/icons-material/Search";
 import AddIcon from "@mui/icons-material/Add";
+import UploadFileIcon from "@mui/icons-material/UploadFile";
 import VisibilityIcon from "@mui/icons-material/Visibility";
 import BlockIcon from "@mui/icons-material/Block";
 import CheckCircleIcon from "@mui/icons-material/CheckCircle";
@@ -27,7 +29,7 @@ import DetailStudent from "../../../components/Admin/StudentManagement/DetailStu
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 
-import { fetchGet, fetchPut } from "../../../lib/httpHandler.js";
+import { fetchGet, fetchPostFormData,fetchPut } from "../../../lib/httpHandler.js"; // Giả sử bạn có hàm fetchPostFormData
 import { showYesNoMessageBox } from "../../../components/MessageBox/YesNoMessageBox/showYesNoMessgeBox.js";
 import "./StudentManagement.css";
 
@@ -38,83 +40,111 @@ export default function StudentManagement({ predefinedClassId }) {
   const [openDetail, setOpenDetail] = useState(false);
   const [selectedStudent, setSelectedStudent] = useState(null);
   const [openAddStudent, setOpenAddStudent] = useState(false);
+  const [openExcelDialog, setOpenExcelDialog] = useState(false);
+  const [excelFile, setExcelFile] = useState(null);
+  const [excelUploading, setExcelUploading] = useState(false);
+  const [schoolId, setSchoolId] = useState(null);
+  const [schoolName, setSchoolName] = useState("");
 
   const classId = predefinedClassId;
 
-const fetchStudents = useCallback(async () => {
-  if (!classId) {
-    setLoading(false);
-    return;
-  }
+  // Tải thông tin trường học của user hiện tại
+  const loadSchoolInfo = useCallback(async () => {
+    const accountId = localStorage.getItem("accountId");
+    if (!accountId) {
+      toast.error("Phiên đăng nhập hết hạn");
+      return;
+    }
 
-  setLoading(true);
+    try {
+      const user = await new Promise((resolve, reject) => {
+        fetchGet(
+          `/api/accounts/by-account/${accountId}`,
+          resolve,
+          reject,
+          () => reject(new Error("Network error"))
+        );
+      });
 
-  try {
- 
-    const profiles = await new Promise((resolve, reject) => {
-      fetchGet(
-        `/api/student-profiles/by-class/${classId}`,
-        (data) => resolve(data),          
-        (error) => reject(error),           
-        () => reject(new Error("Network error")) 
+      if (!user || !user.schoolId) {
+        toast.error("Không tìm thấy trường học của bạn");
+        return;
+      }
+
+      const school = await new Promise((resolve, reject) => {
+        fetchGet(
+          `/api/schools/${user.schoolId}`,
+          resolve,
+          reject,
+          () => reject(new Error("Failed to fetch school"))
+        );
+      });
+
+      if (!school || !school.name) {
+        toast.error("Không tải được thông tin trường");
+        return;
+      }
+
+      setSchoolId(user.schoolId);
+      setSchoolName(school.name);
+    } catch (error) {
+      console.error("Lỗi tải thông tin trường:", error);
+      toast.error("Không thể tải thông tin trường học");
+    }
+  }, []);
+
+  // Tải danh sách học sinh
+  const fetchStudents = useCallback(async () => {
+    if (!classId) return;
+
+    setLoading(true);
+    try {
+      const profiles = await new Promise((resolve, reject) => {
+        fetchGet(`/api/student-profiles/by-class/${classId}`, resolve, reject);
+      });
+
+      const detailedStudents = await Promise.all(
+        profiles.map(async (profile) => {
+          const user = await new Promise((resolve, reject) => {
+            fetchGet(`/api/users/${profile.userId}`, resolve, reject);
+          });
+
+          const account = await new Promise((resolve, reject) => {
+            fetchGet(`/api/accounts/${user.accountId}`, resolve, reject);
+          });
+
+          return {
+            id: profile.userId,
+            studentName: user.name || "Chưa có tên",
+            dateOfBirth: user.dateOfBirth
+              ? new Date(user.dateOfBirth).toLocaleDateString("vi-VN")
+              : "Chưa có",
+            gender: user.gender === "Nam" ? "Nam" : user.gender === "Nữ" ? "Nữ" : "Khác",
+            enrollDate: profile.enrollDate
+              ? new Date(profile.enrollDate).toLocaleDateString("vi-VN")
+              : "Chưa có",
+            address: user.address || "Chưa có",
+            username: account.username || "Chưa có",
+            status: account.status ?? true,
+            accountId: account.id,
+            userData: user,
+          };
+        })
       );
-    });
 
-    console.log("Fetched profiles:", profiles); 
+      setStudents(detailedStudents);
+    } catch (err) {
+      console.error("Lỗi tải học sinh:", err);
+      setStudents([]);
+    } finally {
+      setLoading(false);
+    }
+  }, [classId]);
 
-    const detailedStudents = await Promise.all(
-      profiles.map(async (profile) => {
-        const userId = profile.userId;
-
-        const userRes = await new Promise((resolve, reject) => {
-          fetchGet(
-            `/api/users/${userId}`,
-            resolve,
-            reject,
-            () => reject(new Error("Lỗi tải thông tin user"))
-          );
-        });
-
-        const accountRes = await new Promise((resolve, reject) => {
-          fetchGet(
-            `/api/accounts/${userRes.accountId}`,
-            resolve,
-            reject,
-            () => reject(new Error("Lỗi tải tài khoản"))
-          );
-        });
-
-        return {
-          id: userId,
-          studentName: userRes.name || "Chưa có tên",
-          dateOfBirth: userRes.dateOfBirth
-            ? new Date(userRes.dateOfBirth).toLocaleDateString("vi-VN")
-            : "Chưa có",
-          gender: userRes.gender === "Nam" ? "Nam" : userRes.gender === "Nữ" ? "Nữ" : "Khác",
-          enrollDate: profile.enrollDate
-            ? new Date(profile.enrollDate).toLocaleDateString("vi-VN")
-            : "Chưa có",
-          address: userRes.address || "Chưa có",
-          username: accountRes.username || "Chưa có",
-          status: accountRes.status ?? true,
-          accountId: accountRes.id,
-          userData: userRes,
-        };
-      })
-    );
-
-    setStudents(detailedStudents);
-  } catch (err) {
-    console.error("Lỗi tải học sinh:", err);
-    toast.error("Không thể tải danh sách học sinh");
-    setStudents([]);
-  } finally {
-    setLoading(false);
-  }
-}, [classId]);
   useEffect(() => {
+    loadSchoolInfo();
     fetchStudents();
-  }, [fetchStudents]);
+  }, [loadSchoolInfo, fetchStudents]);
 
   const filteredStudents = useMemo(() => {
     if (!searchTerm.trim()) return students;
@@ -126,6 +156,57 @@ const fetchStudents = useCallback(async () => {
     );
   }, [students, searchTerm]);
 
+  // Xử lý upload Excel
+  const handleExcelUpload = async () => {
+    if (!excelFile) {
+      toast.warning("Vui lòng chọn file Excel");
+      return;
+    }
+
+    if (!excelFile.name.endsWith(".xlsx")) {
+      toast.error("Chỉ hỗ trợ file .xlsx");
+      return;
+    }
+
+    if (!schoolId) {
+      toast.error("Không tìm thấy SchoolId. Vui lòng tải lại trang");
+      return;
+    }
+
+    setExcelUploading(true);
+
+    try {
+      const formData = new FormData();
+      formData.append("file", excelFile);
+      formData.append("schoolId", schoolId);
+
+      const result = await new Promise((resolve, reject) => {
+        fetchPostFormData(
+          `/api/classes/${classId}/add-students/excel`,
+          formData,
+          (data) => resolve(data),
+          (err) => reject(err)
+        );
+      });
+
+      if (result.success) {
+        toast.success(result.message || "Thêm học sinh từ Excel thành công!");
+        fetchStudents(); // Refresh danh sách
+      } else {
+        toast.error(result.message || "Có lỗi xảy ra khi thêm học sinh");
+      }
+
+      setOpenExcelDialog(false);
+      setExcelFile(null);
+    } catch (error) {
+      console.error("Lỗi upload Excel:", error);
+      toast.error(error.message || "Không thể upload file Excel");
+    } finally {
+      setExcelUploading(false);
+    }
+  };
+
+  // Các hàm khác giữ nguyên
   const handleOpenDetail = (student) => {
     setSelectedStudent(student);
     setOpenDetail(true);
@@ -221,14 +302,33 @@ const fetchStudents = useCallback(async () => {
           }}
           sx={{ width: 400 }}
         />
-        <Button
-          variant="contained"
-          startIcon={<AddIcon />}
-          onClick={() => setOpenAddStudent(true)}
-        >
-          Thêm học sinh
-        </Button>
+
+        <Box sx={{ display: "flex", gap: 1 }}>
+          <Button
+            variant="contained"
+            startIcon={<AddIcon />}
+            onClick={() => setOpenAddStudent(true)}
+          >
+            Thêm học sinh
+          </Button>
+
+          <Button
+            variant="outlined"
+            color="primary"
+            startIcon={<UploadFileIcon />}
+            onClick={() => setOpenExcelDialog(true)}
+          >
+            Thêm bằng Excel
+          </Button>
+        </Box>
       </Box>
+
+      {/* Thông tin trường (tùy chọn hiển thị) */}
+      {schoolName && (
+        <Typography variant="subtitle2" color="text.secondary" sx={{ mt: 1, mb: 2 }}>
+          Trường: {schoolName}
+        </Typography>
+      )}
 
       <Box className="table-container">
         {loading ? (
@@ -250,24 +350,70 @@ const fetchStudents = useCallback(async () => {
         )}
       </Box>
 
+      {/* Dialog thêm học sinh đơn */}
       <AddStudent
         open={openAddStudent}
         onClose={() => setOpenAddStudent(false)}
         classId={classId}
+        schoolId={schoolId} // Truyền thêm nếu component AddStudent cần
         onSuccess={() => {
           fetchStudents();
           setOpenAddStudent(false);
         }}
       />
 
-        <DetailStudent
-  open={openDetail}
-  onClose={handleCloseDetail}
-  student={selectedStudent}
-  onUpdateSuccess={() => {
-    fetchStudents(); 
-  }}
-/>
+      {/* Dialog xem chi tiết */}
+      <DetailStudent
+        open={openDetail}
+        onClose={handleCloseDetail}
+        student={selectedStudent}
+        onUpdateSuccess={() => fetchStudents()}
+      />
+
+      {/* Dialog upload Excel */}
+      <Dialog open={openExcelDialog} onClose={() => setOpenExcelDialog(false)} maxWidth="sm" fullWidth>
+        <DialogTitle>Thêm học sinh bằng file Excel</DialogTitle>
+        <DialogContent dividers>
+          <Alert severity="info" sx={{ mb: 2 }}>
+            Vui lòng sử dụng template Excel đúng định dạng (bắt đầu dữ liệu từ hàng 5).<br />
+            Tải template mẫu <a href="/templates/add-students-template.xlsx" download>mẫu tại đây</a>
+          </Alert>
+
+          <Box sx={{ mt: 2 }}>
+            <Button
+              variant="outlined"
+              component="label"
+              fullWidth
+              startIcon={<UploadFileIcon />}
+            >
+              Chọn file Excel (.xlsx)
+              <input
+                type="file"
+                hidden
+                accept=".xlsx"
+                onChange={(e) => setExcelFile(e.target.files[0])}
+              />
+            </Button>
+
+            {excelFile && (
+              <Typography variant="body2" sx={{ mt: 1 }}>
+                Đã chọn: <strong>{excelFile.name}</strong> ({(excelFile.size / 1024).toFixed(1)} KB)
+              </Typography>
+            )}
+          </Box>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setOpenExcelDialog(false)}>Hủy</Button>
+          <Button
+            variant="contained"
+            onClick={handleExcelUpload}
+            disabled={excelUploading || !excelFile}
+            startIcon={excelUploading ? <CircularProgress size={20} /> : null}
+          >
+            {excelUploading ? "Đang xử lý..." : "Upload & Thêm"}
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 }

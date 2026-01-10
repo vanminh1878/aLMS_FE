@@ -43,7 +43,51 @@ const fetchGet = async (uri, onSuccess, onFail, onException) => {
     }
   }
 };
+const fetchPostFormData = async (uri, formData, onSuccess, onFail, onException) => {
+  try {
+    const token = localStorage.getItem("accessToken") || localStorage.getItem("jwtToken");
 
+    const headers = {};
+    if (token) {
+      headers.Authorization = `Bearer ${token}`;
+    }
+
+    const res = await fetch(BE_ENPOINT + uri, {
+      method: "POST",
+      headers: headers, // Chỉ Authorization, KHÔNG có Content-Type
+      body: formData,
+    });
+
+    if (res.status === 204) {
+      return onSuccess({ message: "Thành công" });
+    }
+
+    let data;
+    try {
+      data = await res.json();
+    } catch {
+      data = { title: "Không thể parse response" };
+    }
+
+    if (!res.ok) {
+      return onFail({
+        title: data.title || "Lỗi server",
+        status: res.status,
+        detail: data.detail || data.errors || data.message || "Không có thông tin chi tiết",
+      });
+    }
+
+    return onSuccess(data);
+  } catch (error) {
+    console.error("Fetch POST FormData error:", error.message);
+    if (typeof onException === "function") {
+      return onException(error);
+    } else {
+      console.warn("onException is not a function, skipping...");
+      return;
+    }
+  }
+};
 const fetchPost = async (uri, reqData, onSuccess, onFail, onException) => {
   try {
     const res = await fetch(BE_ENPOINT + uri, {
@@ -158,4 +202,4 @@ const fetchUpload = async (uri, formData, onSuccess, onFail, onException) => {
   }
 };
 
-export { fetchGet, fetchPost, fetchDelete, fetchPut, fetchUpload, BE_ENPOINT };
+export { fetchGet, fetchPost, fetchDelete, fetchPut, fetchUpload,fetchPostFormData, BE_ENPOINT };

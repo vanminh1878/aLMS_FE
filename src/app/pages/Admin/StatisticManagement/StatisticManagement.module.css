@@ -18,12 +18,12 @@
   color: #0f172a;
 }
 
-.pageTitle{
+/* .pageTitle{
   font-size: 1.5rem;
   font-weight: 600;
   margin-bottom: 18px;
   color: var(--primary);
-}
+} */
 
 .statCard{
   background: var(--card-bg);
