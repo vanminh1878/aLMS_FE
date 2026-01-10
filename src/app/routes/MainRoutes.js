@@ -15,6 +15,7 @@ import RoleManagement from "../pages/Admin/RoleManagement/RoleManagement.jsx";
 import BehaviourManagement from "../pages/Admin/BehaviourManagement/BehaviourManagement.jsx";
 import AccountManagement from "../pages/Admin/AccountManagement/AccountManagement.jsx";
 import AccountManagementStudent from "../pages/Student/AccountManagement/AccountManagement.jsx";
+import AccountManagementParent from "../pages/Parent/AccountManagement/AccountManagement.jsx";
 import StatisticMnagement from "../pages/Admin/StatisticManagement/StatisticManagement.jsx";
 
 // === TRANG AUTH ===
@@ -22,7 +23,8 @@ import Login from "../pages/Other/Login/Login";
 
 // === TRANG HS ===
 import StudentPage from "../pages/Student/StudentSubjectLearning.jsx";
-
+// === TRANG PH ===
+import ParentPage from "../pages/Parent/ParentDashboard.jsx";
 
 // === TRANG LỖI (tùy chọn) ===
 // import PageNotFound from "../pages/Error/PageNotFound";
@@ -56,6 +58,10 @@ export default function MainRoutes() {
           {/* Trang chủ student */}
           <Route path="/student" element={<StudentPage />} >
            <Route path="/student/account-management" element={<AccountManagementStudent />} />
+          </Route>
+          {/* Trang chủ parent */}
+          <Route path="/parent" element={<ParentPage />} >
+           <Route path="/parent/account-management" element={<AccountManagementParent />} />
           </Route>
         </Route>
 

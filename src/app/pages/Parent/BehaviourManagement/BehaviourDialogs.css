@@ -1,0 +1,74 @@
+.behaviour-dialog .dialog-header {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  padding: 12px 0;
+}
+
+.behaviour-dialog .dialog-header .MuiAvatar-root {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.behaviour-dialog .dialog-content {
+  padding: 24px !important;
+}
+
+/* Phần thông tin học sinh - đẹp hơn */
+.behaviour-dialog .student-info-card {
+  background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 20px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+}
+
+.behaviour-dialog .student-info-card .MuiAvatar-root {
+  box-shadow: 0 6px 18px rgba(59, 130, 246, 0.12);
+}
+
+/* Nhích Giới tính và Ngày sinh lên gần hơn */
+.behaviour-dialog .student-info-label {
+  font-size: 0.875rem;
+  color: #64748b;
+  font-weight: 500;
+  margin-bottom: 2px; /* Giảm khoảng cách dưới label */
+}
+
+.behaviour-dialog .student-info-value {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #1e293b;
+  margin-bottom: 12px; /* Khoảng cách giữa các cặp label-value */
+}
+
+.behaviour-dialog .student-info-left {
+  display: flex;
+  align-items: center;
+}
+
+/* Bảng hành vi */
+.behaviour-dialog .MuiTableContainer-root {
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+.behaviour-dialog .MuiTableHead-root {
+  background-color: #3b82f6 !important; /* Xanh dương đẹp */
+}
+
+.behaviour-dialog .MuiTableHead-root .MuiTableCell-root {
+  font-weight: 600;
+  color: white !important;
+  font-size: 0.95rem;
+}
+
+/* .behaviour-dialog .MuiTableRow-root:hover {
+  background-color: #eff6ff !important;
+} */
+
+.behaviour-dialog .MuiDialogActions-root {
+  padding: 20px 24px;
+  background-color: #f9fafb;
+  border-top: 1px solid #e2e8f0;
+}
