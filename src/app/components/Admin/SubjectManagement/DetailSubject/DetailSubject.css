@@ -1,0 +1,10 @@
+.detail-subject-dialog .dialog-title {
+  background: linear-gradient(135deg, #0ea5e9, #0284c7);
+  color: white;
+  padding: 20px 24px;
+}
+
+.detail-subject-dialog .dialog-content {
+  background: #f9fafb;
+  padding: 32px;
+}

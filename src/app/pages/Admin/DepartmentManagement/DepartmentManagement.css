@@ -125,11 +125,14 @@
   color: #64748b;
   font-size: 0.95rem;
   font-weight: 500;
-  margin-top: -10px;
+  margin-top: 0px;
 }
-
+.dept-header  {
+  margin-bottom: 0px !important;
+}
 .teacher-count {
   margin-top: 0px;
+  margin-bottom: 10px;
   display: flex;
   align-items: center;
   gap: 8px;

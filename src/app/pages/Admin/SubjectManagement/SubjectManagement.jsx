@@ -33,6 +33,7 @@ import "react-toastify/dist/ReactToastify.css";
 
 import { fetchGet, fetchDelete } from "../../../lib/httpHandler.js";
 import AddSubject from "../../../components/Admin/SubjectManagement/AddSubject/AddSubject.jsx";
+import DetailSubject from "../../../components/Admin/SubjectManagement/DetailSubject/DetailSubject.jsx"; // ← Thêm import DetailSubject
 import { showYesNoMessageBox } from "../../../components/MessageBox/YesNoMessageBox/showYesNoMessgeBox.js";
 import "./SubjectManagement.css";
 
@@ -59,6 +60,8 @@ export default function SubjectManagement() {
   const [loadingSubjects, setLoadingSubjects] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [openAdd, setOpenAdd] = useState(false);
+  const [openDetail, setOpenDetail] = useState(false); // ← Thêm state cho dialog detail
+  const [selectedSubject, setSelectedSubject] = useState(null); // ← Thêm state lưu subject đang xem/sửa
   const navigate = useNavigate();
 
   // Lấy danh sách lớp học
@@ -152,7 +155,7 @@ export default function SubjectManagement() {
   // Xóa môn học
   const handleDelete = async (id, name) => {
     const ok = await showYesNoMessageBox(
-      `Xóa môn học "${name}"?<br><br>Dữ liệu sẽ bị xóa vĩnh viễn.`
+      `Xóa môn học "${name}"? Dữ liệu liên quan về môn học sẽ bị xóa vĩnh viễn.`
     );
     if (!ok) return;
 
@@ -321,7 +324,16 @@ export default function SubjectManagement() {
 
                     <CardActions className="card-actions">
                       <Tooltip title="Sửa">
-                        <IconButton size="small" color="primary">
+                        <IconButton
+                          size="small"
+                          color="primary"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            const clsInfo = getClassInfoForSubject(subject);
+                            setSelectedSubject({ ...subject, className: clsInfo.className, grade: clsInfo.grade });
+                            setOpenDetail(true);
+                          }}
+                        >
                           <EditIcon />
                         </IconButton>
                       </Tooltip>
@@ -346,7 +358,7 @@ export default function SubjectManagement() {
         </Grid>
       )}
 
-      {/* Dialog thêm môn học - chỉ mở khi đã chọn lớp cụ thể */}
+      {/* Dialog thêm môn học */}
       <AddSubject
         open={openAdd}
         onClose={() => setOpenAdd(false)}
@@ -358,6 +370,20 @@ export default function SubjectManagement() {
             fetchSubjectsByClass(selectedClassId);
           }
           setOpenAdd(false);
+        }}
+      />
+
+
+      <DetailSubject
+        open={openDetail}
+        onClose={() => setOpenDetail(false)}
+        subject={selectedSubject}
+        onUpdateSuccess={(updated) => {
+          if (updated && updated.id) {
+            setSubjects((prev) => prev.map((s) => (s.id === updated.id ? { ...s, ...updated } : s)));
+            setSelectedSubject((prev) => (prev && prev.id === updated.id ? { ...prev, ...updated } : prev));
+          }
+          setOpenDetail(false);
         }}
       />
     </Box>
