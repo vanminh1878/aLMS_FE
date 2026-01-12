@@ -18,6 +18,19 @@ import {
   Chip,
   Skeleton,
   Zoom,
+  Tabs,
+  Tab,
+  Checkbox,
+  List,
+  ListItem,
+  ListItemText,
+  ListItemIcon,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  CircularProgress,
+  Select as MuiSelect,
 } from "@mui/material";
 import SearchIcon from "@mui/icons-material/Search";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
@@ -29,7 +42,7 @@ import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import "./ClassManagement.css";
 
-import { fetchGet, fetchPut } from "../../../lib/httpHandler.js";
+import { fetchGet, fetchPut, fetchPost } from "../../../lib/httpHandler.js";
 import LockIcon from "@mui/icons-material/Lock";
 import LockOpenIcon from "@mui/icons-material/LockOpen";
 import StudentManagement from "../StudentManagement/StudentManagement.jsx";
@@ -52,6 +65,17 @@ export default function ClassManagement() {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedGrade, setSelectedGrade] = useState("all");
   const [selectedClass, setSelectedClass] = useState(null);
+  const [tabIndex, setTabIndex] = useState(0);
+  const [allSubjects, setAllSubjects] = useState([]);
+  const [classSubjects, setClassSubjects] = useState([]);
+  const [selectedSubjectIds, setSelectedSubjectIds] = useState(new Set());
+  const [addingSubjects, setAddingSubjects] = useState(false);
+  const [teacherDialogOpen, setTeacherDialogOpen] = useState(false);
+  const [teacherDialogSubject, setTeacherDialogSubject] = useState(null);
+  const [assignedTeachers, setAssignedTeachers] = useState([]);
+  const [availableTeachers, setAvailableTeachers] = useState([]);
+  const [addingTeacher, setAddingTeacher] = useState(false);
+  const [selectedTeacherId, setSelectedTeacherId] = useState("");
   const [openAdd, setOpenAdd] = useState(false);
   const [openDetail, setOpenDetail] = useState(false);
   const [detailClass, setDetailClass] = useState(null);
@@ -146,6 +170,144 @@ export default function ClassManagement() {
   const handleOpenDetail = (cls) => {
     setDetailClass(cls);
     setOpenDetail(true);
+  };
+
+  const handleTabChange = (e, v) => setTabIndex(v);
+
+  const fetchAllSubjects = useCallback(() => {
+    fetchGet(
+      "/api/subjects",
+      (data) => setAllSubjects(Array.isArray(data) ? data : []),
+      () => setAllSubjects([])
+    );
+  }, []);
+
+  const fetchClassSubjects = useCallback((classId) => {
+    if (!classId) return;
+    fetchGet(
+      `/api/subjects/by-class/${classId}`,
+      (data) => setClassSubjects(Array.isArray(data) ? data : []),
+      () => setClassSubjects([])
+    );
+  }, []);
+
+  useEffect(() => {
+    if (selectedClass) {
+      fetchAllSubjects();
+      fetchClassSubjects(selectedClass.id);
+      setSelectedSubjectIds(new Set());
+    }
+  }, [selectedClass, fetchAllSubjects, fetchClassSubjects]);
+
+  const toggleSelectSubject = (subjectId) => {
+    setSelectedSubjectIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(subjectId)) next.delete(subjectId);
+      else next.add(subjectId);
+      return next;
+    });
+  };
+
+  const handleAddSelectedSubjects = async () => {
+    if (!selectedClass) return;
+    if (selectedSubjectIds.size === 0) return toast.error("Vui lòng chọn ít nhất 1 môn");
+    setAddingSubjects(true);
+    const year = new Date().getFullYear();
+    const schoolYear = `${year}-${year + 1}`;
+    try {
+      for (const sid of Array.from(selectedSubjectIds)) {
+        await new Promise((resolve, reject) =>
+          fetchPost(`/api/classes/${selectedClass.id}/subjects`, { subjectId: sid, schoolYear }, resolve, reject)
+        );
+      }
+      toast.success("Thêm môn cho lớp thành công");
+      fetchClassSubjects(selectedClass.id);
+      setSelectedSubjectIds(new Set());
+    } catch (err) {
+      console.error(err);
+      toast.error("Thêm môn cho lớp thất bại");
+    } finally {
+      setAddingSubjects(false);
+    }
+  };
+
+  const openTeacherDialogFor = async (subject) => {
+    setTeacherDialogSubject(subject);
+    setTeacherDialogOpen(true);
+    setAssignedTeachers([]);
+    setAvailableTeachers([]);
+    setSelectedTeacherId("");
+
+    // try to load assigned teachers via a few possible endpoints
+    const tryGet = async (url) =>
+      new Promise((resolve, reject) => fetchGet(url, resolve, reject));
+
+    try {
+      // attempt several common patterns
+      const attempts = [
+        `/api/class-subjects/${subject.id}/teachers`,
+        `/api/class-subjects/by-class/${selectedClass.id}/subject/${subject.id}/teachers`,
+        `/api/class-subjects/${selectedClass.id}/subjects/${subject.id}/teachers`,
+      ];
+      for (const url of attempts) {
+        try {
+          const res = await tryGet(url);
+          if (Array.isArray(res)) {
+            setAssignedTeachers(res);
+            break;
+          }
+        } catch (e) {
+          // continue
+        }
+      }
+
+      // load available teachers (best-effort)
+      try {
+        const t = await tryGet(`/api/teachers`);
+        if (Array.isArray(t)) setAvailableTeachers(t);
+      } catch (e) {
+        // ignore
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const handleAddTeacher = async () => {
+    if (!teacherDialogSubject || !selectedTeacherId) return;
+    setAddingTeacher(true);
+    const year = new Date().getFullYear();
+    const schoolYear = `${year}-${year + 1}`;
+
+    // try POST to a few endpoints
+    const tryPost = (url, payload) => new Promise((res, rej) => fetchPost(url, payload, res, rej));
+    const attempts = [
+      `/api/class-subjects/${teacherDialogSubject.id}/teachers`,
+      `/api/class-subjects/by-class/${selectedClass.id}/subject/${teacherDialogSubject.id}/teachers`,
+      `/api/class-subjects/${selectedClass.id}/subjects/${teacherDialogSubject.id}/teachers`,
+    ];
+    try {
+      for (const url of attempts) {
+        try {
+          const r = await tryPost(url, { teacherId: selectedTeacherId, schoolYear });
+          if (r) {
+            toast.success("phân công giáo viên thành công");
+            // refresh assigned
+            await fetchClassSubjects(selectedClass.id);
+            // refresh assigned teachers list
+            openTeacherDialogFor(teacherDialogSubject);
+            break;
+          }
+        } catch (e) {
+          // continue
+        }
+      }
+    } catch (err) {
+      console.error(err);
+      toast.error("phân công giáo viên thất bại");
+    } finally {
+      setAddingTeacher(false);
+    }
   };
 
   const renderGrid = () => {
@@ -245,10 +407,64 @@ export default function ClassManagement() {
 
       {selectedClass ? (
         <>
-          <Button variant="outlined" startIcon={<ArrowBackIcon />} onClick={() => setSelectedClass(null)} sx={{ mb: 3 }}>
+          <Button variant="outlined" startIcon={<ArrowBackIcon />} onClick={() => { setSelectedClass(null); setTabIndex(0); }} sx={{ mb: 3 }}>
             Quay lại
           </Button>
-          <StudentManagement predefinedClassId={selectedClass.id} />
+          <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 2 }}>
+            <Tabs value={tabIndex} onChange={handleTabChange}>
+              <Tab label="Danh sách học sinh" />
+              <Tab label="Môn học" />
+            </Tabs>
+          </Box>
+
+          {tabIndex === 0 && <StudentManagement predefinedClassId={selectedClass.id} />}
+
+          {tabIndex === 1 && (
+            <Box>
+              <Typography variant="h6" gutterBottom>Danh sách môn của lớp {selectedClass.className}</Typography>
+
+              <Box sx={{ display: 'flex', gap: 3, mb: 2 }}>
+                <Box className="subject-list">
+                  <Typography variant="subtitle1">Môn hiện có</Typography>
+                  <List>
+                    {(classSubjects.length === 0) && (
+                      <Typography color="text.secondary">Lớp chưa có môn nào</Typography>
+                    )}
+                    {classSubjects.map((s, idx) => (
+                      <ListItem key={s.id} secondaryAction={(
+                        <Button size="small" onClick={() => openTeacherDialogFor(s)}>phân công giáo viên</Button>
+                      )}>
+                        <ListItemIcon sx={{ minWidth: 40 }}>
+                          <Box sx={{ width: 34, height: 34, borderRadius: '50%', background: '#fff !important', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, color: '#0ea5e9' }}>{idx + 1}</Box>
+                        </ListItemIcon>
+                        <ListItemText primary={s.name} secondary={s.category || s.description} />
+                      </ListItem>
+                    ))}
+                  </List>
+                </Box>
+
+                <Box className="subject-add-panel">
+                  <Typography variant="subtitle1">Thêm môn vào lớp</Typography>
+                  <Box className="subject-scroll">
+                    {allSubjects.map((s) => (
+                      <ListItem key={s.id} button onClick={() => toggleSelectSubject(s.id)}>
+                        <ListItemIcon>
+                          <Checkbox checked={selectedSubjectIds.has(s.id)} />
+                        </ListItemIcon>
+                        <ListItemText primary={s.name} secondary={s.category} />
+                      </ListItem>
+                    ))}
+                  </Box>
+
+                  <Box sx={{ mt: 2, display: 'flex', gap: 1 }}>
+                    <Button variant="contained" onClick={handleAddSelectedSubjects} disabled={addingSubjects}>
+                      {addingSubjects ? <CircularProgress size={18} /> : 'Thêm môn cho lớp'}
+                    </Button>
+                  </Box>
+                </Box>
+              </Box>
+            </Box>
+          )}
         </>
       ) : (
         <>
@@ -309,6 +525,34 @@ export default function ClassManagement() {
           fetchUserAndClasses();
         }}
       />
+
+      {/* Teacher assignment dialog */}
+      <Dialog open={teacherDialogOpen} onClose={() => setTeacherDialogOpen(false)} maxWidth="sm" fullWidth>
+        <DialogTitle>phân công giáo viên cho môn {teacherDialogSubject?.name}</DialogTitle>
+        <DialogContent>
+          <Typography variant="subtitle2">Giáo viên đã phân công</Typography>
+          <List>
+            {assignedTeachers.length === 0 && <Typography color="text.secondary">Chưa có giáo viên nào</Typography>}
+            {assignedTeachers.map((t) => (
+              <ListItem key={t.id}><ListItemText primary={t.teacherName || t.name || t.teacherId} secondary={t.schoolYear} /></ListItem>
+            ))}
+          </List>
+
+          <Typography variant="subtitle2" sx={{ mt: 2 }}>Chọn giáo viên để phân công</Typography>
+          <MuiSelect fullWidth value={selectedTeacherId} onChange={(e) => setSelectedTeacherId(e.target.value)}>
+            <MenuItem value="">-- Chọn giáo viên --</MenuItem>
+            {availableTeachers.map((t) => (
+              <MenuItem key={t.id} value={t.id}>{t.name || t.fullName || t.teacherName}</MenuItem>
+            ))}
+          </MuiSelect>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setTeacherDialogOpen(false)}>Đóng</Button>
+          <Button variant="contained" onClick={handleAddTeacher} disabled={addingTeacher || !selectedTeacherId}>
+            {addingTeacher ? <CircularProgress size={18} /> : 'phân công giáo viên'}
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 }

@@ -276,3 +276,118 @@
 .class-management-container .MuiSelect-icon {
   color: #0ea5e9;
 }
+
+/* --- Tabs & Subjects panel --- */
+.class-management-container .MuiTabs-root {
+  border-radius: 12px;
+}
+
+.class-management-container .MuiTab-root {
+  text-transform: none;
+  font-weight: 600;
+  color: #0f172a;
+}
+
+.class-management-container .subject-panel {
+  display: flex;
+  gap: 24px;
+  align-items: flex-start;
+}
+
+.class-management-container .subject-list {
+  flex: 1;
+  background: white;
+  border: 1px solid #fff;
+  border-radius: 12px;
+  padding: 16px;
+  box-shadow: 0 6px 20px rgba(14,165,233,0.06);
+}
+
+.class-management-container .subject-list .MuiListItem-root {
+  border-bottom: 1px dashed #fff !important;
+  padding-left: 6px;
+}
+
+.class-management-container .subject-list .MuiListItem-root:last-child {
+  border-bottom: none;
+}
+
+.class-management-container .subject-list .MuiListItemText-root .MuiTypography-root {
+  font-weight: 600;
+}
+
+.class-management-container .subject-add-panel {
+  width: 420px;
+  background: white;
+  border: 1px solid #eef2ff;
+  border-radius: 12px;
+  padding: 14px;
+  box-shadow: 0 6px 20px rgba(59,130,246,0.04);
+}
+
+.class-management-container .subject-add-panel .MuiListItem-root {
+  padding: 8px 6px;
+}
+
+.class-management-container .subject-add-panel .MuiCheckbox-root {
+  color: #0ea5e9;
+}
+
+.class-management-container .subject-add-panel .MuiListItemText-primary {
+  font-weight: 600;
+}
+
+.class-management-container .subject-add-panel .MuiButton-root {
+  border-radius: 10px;
+}
+
+/* Teacher dialog styling */
+.class-management-container .MuiDialog-paper {
+  border-radius: 12px;
+}
+
+.class-management-container .teacher-list .MuiListItem-root {
+  padding: 8px 6px;
+  border-bottom: 1px solid #f8fafc;
+}
+
+.class-management-container .MuiSelect-root {
+  border-radius: 10px;
+}
+
+@media (max-width: 900px) {
+  .class-management-container .subject-panel { flex-direction: column; }
+  .class-management-container .subject-add-panel { width: 100%; }
+}
+
+/* scroll area inside add-panel */
+.class-management-container .subject-add-panel .subject-scroll {
+  max-height: 360px;
+  overflow: auto;
+  border-radius: 8px;
+  border: 1px solid #f1f5f9;
+  padding: 8px;
+  background: #ffffff;
+}
+
+.class-management-container .subject-list {
+  flex: 1;
+  background: white;
+  border: 1px solid #eef2ff;
+  border-radius: 12px;
+  padding: 12px;
+  box-shadow: 0 6px 20px rgba(14,165,233,0.04);
+}
+
+.class-management-container .subject-list .MuiListItem-root {
+  padding: 10px 8px;
+  align-items: center;
+}
+
+.class-management-container .subject-list .MuiListItemIcon-root {
+  min-width: 40px;
+}
+
+.class-management-container .subject-list .MuiListItemText-secondary {
+  color: #64748b;
+}
