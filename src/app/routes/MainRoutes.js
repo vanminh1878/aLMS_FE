@@ -14,6 +14,7 @@ import DepartmentManagement from "../pages/Admin/DepartmentManagement/Department
 import RoleManagement from "../pages/Admin/RoleManagement/RoleManagement.jsx";
 import BehaviourManagement from "../pages/Admin/BehaviourManagement/BehaviourManagement.jsx";
 import AccountManagement from "../pages/Admin/AccountManagement/AccountManagement.jsx";
+import TimetableManagement from "../pages/Admin/TimetableManagement/TimetableManagement";
 import AccountManagementStudent from "../pages/Student/AccountManagement/AccountManagement.jsx";
 import AccountManagementParent from "../pages/Parent/AccountManagement/AccountManagement.jsx";
 import StatisticMnagement from "../pages/Admin/StatisticManagement/StatisticManagement.jsx";
@@ -48,6 +49,7 @@ export default function MainRoutes() {
             <Route path="school-management" element={<SchoolManagement />} />
             <Route path="class-management" element={<ClassManagement />} />
             <Route path="student-management" element={<StudentManagement />} />
+            <Route path="timetable-management" element={<TimetableManagement />} />
             <Route path="subject-management" element={<SubjectManagement />} />
             <Route path="/admin/subjects/:subjectId" element={<SubjectDetailManagement />} />
             <Route path="teacher-management" element={<DepartmentManagement />} />

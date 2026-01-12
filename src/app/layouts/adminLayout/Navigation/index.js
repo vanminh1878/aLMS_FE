@@ -10,6 +10,7 @@ import { FaTasks } from "react-icons/fa";
 import { FaClipboardList } from "react-icons/fa";
 import { FaUsersCog } from "react-icons/fa";
 import { FaVideo } from "react-icons/fa";
+import { FaCalendarAlt } from "react-icons/fa";
 import { FaCog } from "react-icons/fa";
 import { NavLink, useLocation } from "react-router-dom";
 import Logo from "../../../assets/icons/logo_LMS.png";
@@ -24,6 +25,7 @@ export default function Navigation() {
     
     // Nội dung học tập
     { name: "Môn học", path: "/admin/subject-management", icon: <FaBookOpen className="fs-5 icon" /> },
+    { name: "Thời khóa biểu", path: "/admin/timetable-management", icon: <FaCalendarAlt className="fs-5 icon" /> },
     // { name: "Chủ đề & Bài học", path: "/admin/topics-lesson-management", icon: <FaClipboardList className="fs-5 icon" /> },
     // { name: "Bài tập & Câu hỏi", path: "/admin/exercise-management", icon: <FaTasks className="fs-5 icon" /> },
     

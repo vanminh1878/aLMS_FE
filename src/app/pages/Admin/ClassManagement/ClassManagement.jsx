@@ -184,9 +184,37 @@ export default function ClassManagement() {
 
   const fetchClassSubjects = useCallback((classId) => {
     if (!classId) return;
+    // Fetch class-subject mappings which include classSubject id, subjectId, subjectName
     fetchGet(
-      `/api/subjects/by-class/${classId}`,
-      (data) => setClassSubjects(Array.isArray(data) ? data : []),
+      `/api/class-subjects/by-class/${classId}`,
+      async (data) => {
+        const mappings = Array.isArray(data) ? data : [];
+        try {
+          const detailed = await Promise.all(
+            mappings.map(
+              (m) =>
+                new Promise((resolve) =>
+                  fetchGet(
+                    `/api/class-subjects/${m.id}/teachers`,
+                    (td) => resolve({ mapping: m, teachers: Array.isArray(td) ? td : [] }),
+                    () => resolve({ mapping: m, teachers: [] })
+                  )
+                )
+            )
+          );
+
+          const enriched = detailed.map((d) => ({
+            ...d.mapping,
+            assignedTeachers: d.teachers,
+            assignedTeacherNames: (d.teachers || []).map((t) => t.teacherName || t.name || t.teacherId).join(", "),
+          }));
+
+          setClassSubjects(enriched);
+        } catch (err) {
+          console.error(err);
+          setClassSubjects(mappings);
+        }
+      },
       () => setClassSubjects([])
     );
   }, []);
@@ -207,6 +235,52 @@ export default function ClassManagement() {
       return next;
     });
   };
+
+  // Load teachers by school with profile enrichment (copied/adapted from RoleManagement)
+  const fetchTeachersBySchool = useCallback((schoolIdParam) => {
+    if (!schoolIdParam) return setAvailableTeachers([]);
+    fetchGet(
+      `/api/teacher-profiles/by-school/${schoolIdParam}`,
+      async (data) => {
+        const profiles = Array.isArray(data) ? data : [];
+        try {
+          const detailed = await Promise.all(
+            profiles.map((p) =>
+              new Promise((resolve) =>
+                fetchGet(`/api/users/${p.userId}`, (user) => resolve({ profile: p, user }), () => resolve({ profile: p }))
+              )
+            )
+          );
+
+          const list = detailed.map((item, idx) => {
+            const p = item.profile || item;
+            const user = item.user || {};
+
+            return {
+              id: p.userId || `temp-${Date.now()}-${idx}`,
+              fullName: user.name || user.userName || p.userName || "Chưa có tên",
+              name: user.name || p.userName || p.name || "Chưa có tên",
+              email: user.email || p.email || "--",
+              phone: user.phoneNumber || p.phone || "",
+              hireDate: p.hireDate || user.hireDate || null,
+              departmentName: p.departmentName || p.department || (user.departmentName || ""),
+              specialization: p.specialization || "",
+              accountId: user.account?.id || p.userId,
+              status: user.account?.status ?? true,
+              rawProfile: p,
+              userObj: user,
+            };
+          });
+
+          setAvailableTeachers(list);
+        } catch (err) {
+          console.error(err);
+          setAvailableTeachers([]);
+        }
+      },
+      () => setAvailableTeachers([])
+    );
+  }, []);
 
   const handleAddSelectedSubjects = async () => {
     if (!selectedClass) return;
@@ -232,44 +306,61 @@ export default function ClassManagement() {
   };
 
   const openTeacherDialogFor = async (subject) => {
+    // `subject` here is a class-subject mapping (contains id = classSubjectId, subjectId, subjectName)
     setTeacherDialogSubject(subject);
     setTeacherDialogOpen(true);
     setAssignedTeachers([]);
     setAvailableTeachers([]);
     setSelectedTeacherId("");
 
-    // try to load assigned teachers via a few possible endpoints
-    const tryGet = async (url) =>
-      new Promise((resolve, reject) => fetchGet(url, resolve, reject));
-
+    // Load assigned teachers for this classSubject
     try {
-      // attempt several common patterns
-      const attempts = [
-        `/api/class-subjects/${subject.id}/teachers`,
-        `/api/class-subjects/by-class/${selectedClass.id}/subject/${subject.id}/teachers`,
-        `/api/class-subjects/${selectedClass.id}/subjects/${subject.id}/teachers`,
-      ];
-      for (const url of attempts) {
+      await new Promise((resolve) =>
+        fetchGet(
+          `/api/class-subjects/${subject.id}/teachers`,
+          (data) => {
+            const list = Array.isArray(data) ? data : [];
+            // ensure each assigned teacher item carries the subject name
+            const subjectNameFromMapping = subject.subjectName || subject.subject_Name || subject.subject || subject.name || "";
+            const augmented = list.map((t) => ({
+              ...t,
+              subject_Name: t.subject_Name || t.subjectName || subjectNameFromMapping,
+            }));
+            setAssignedTeachers(augmented);
+            resolve();
+          },
+          (err) => {
+            console.error("Lỗi tải giáo viên đã phân công:", err);
+            setAssignedTeachers([]);
+            resolve();
+          }
+        )
+      );
+
+      // Ensure we have a schoolId: prefer existing state, otherwise fetch from account
+      let schoolForFetch = selectedClass?.schoolId || schoolId;
+      if (!schoolForFetch) {
         try {
-          const res = await tryGet(url);
-          if (Array.isArray(res)) {
-            setAssignedTeachers(res);
-            break;
+          const accountId = localStorage.getItem("accountId");
+          if (accountId) {
+            const user = await new Promise((resolve, reject) =>
+              fetchGet(`/api/accounts/by-account/${accountId}`, resolve, reject, () => reject("exception"))
+            );
+            schoolForFetch = user?.schoolId || null;
+            if (schoolForFetch) setSchoolId(schoolForFetch);
           }
         } catch (e) {
-          // continue
+          console.error("Không lấy được schoolId từ account:", e);
         }
       }
 
-      // load available teachers (best-effort)
-      try {
-        const t = await tryGet(`/api/teachers`);
-        if (Array.isArray(t)) setAvailableTeachers(t);
-      } catch (e) {
-        // ignore
+      // Call the teacher-profiles endpoint for that school
+      if (schoolForFetch) {
+        fetchTeachersBySchool(schoolForFetch);
       }
     } catch (err) {
       console.error(err);
+      setAssignedTeachers([]);
     }
   };
 
@@ -279,32 +370,46 @@ export default function ClassManagement() {
     const year = new Date().getFullYear();
     const schoolYear = `${year}-${year + 1}`;
 
-    // try POST to a few endpoints
-    const tryPost = (url, payload) => new Promise((res, rej) => fetchPost(url, payload, res, rej));
-    const attempts = [
-      `/api/class-subjects/${teacherDialogSubject.id}/teachers`,
-      `/api/class-subjects/by-class/${selectedClass.id}/subject/${teacherDialogSubject.id}/teachers`,
-      `/api/class-subjects/${selectedClass.id}/subjects/${teacherDialogSubject.id}/teachers`,
-    ];
     try {
-      for (const url of attempts) {
-        try {
-          const r = await tryPost(url, { teacherId: selectedTeacherId, schoolYear });
-          if (r) {
-            toast.success("phân công giáo viên thành công");
-            // refresh assigned
-            await fetchClassSubjects(selectedClass.id);
-            // refresh assigned teachers list
-            openTeacherDialogFor(teacherDialogSubject);
-            break;
-          }
-        } catch (e) {
-          // continue
-        }
+      const res = await new Promise((resolve, reject) =>
+        fetchPost(
+          `/api/class-subjects/${teacherDialogSubject.id}/teachers`,
+          { teacherId: selectedTeacherId, schoolYear },
+          resolve,
+          reject
+        )
+      );
+
+      if (res) {
+        toast.success("Phân công giáo viên thành công");
+        // refresh class-subject list (to update assigned teacher column)
+        fetchClassSubjects(selectedClass.id);
+        // refresh assigned teachers for this classSubject
+        await new Promise((resolve) =>
+          fetchGet(
+            `/api/class-subjects/${teacherDialogSubject.id}/teachers`,
+            (data) => {
+              const list = Array.isArray(data) ? data : [];
+              const subjectNameFromMapping = teacherDialogSubject?.subjectName || teacherDialogSubject?.subject_Name || teacherDialogSubject?.subject || teacherDialogSubject?.name || "";
+              const augmented = list.map((t) => ({
+                ...t,
+                subject_Name: t.subject_Name || t.subjectName || subjectNameFromMapping,
+              }));
+              setAssignedTeachers(augmented);
+              resolve();
+            },
+            () => {
+              setAssignedTeachers([]);
+              resolve();
+            }
+          )
+        );
+      } else {
+        toast.error(res?.message || "Phân công giáo viên thất bại");
       }
     } catch (err) {
       console.error(err);
-      toast.error("phân công giáo viên thất bại");
+      toast.error("Phân công giáo viên thất bại");
     } finally {
       setAddingTeacher(false);
     }
@@ -430,16 +535,24 @@ export default function ClassManagement() {
                     {(classSubjects.length === 0) && (
                       <Typography color="text.secondary">Lớp chưa có môn nào</Typography>
                     )}
-                    {classSubjects.map((s, idx) => (
-                      <ListItem key={s.id} secondaryAction={(
-                        <Button size="small" onClick={() => openTeacherDialogFor(s)}>phân công giáo viên</Button>
-                      )}>
-                        <ListItemIcon sx={{ minWidth: 40 }}>
-                          <Box sx={{ width: 34, height: 34, borderRadius: '50%', background: '#fff !important', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, color: '#0ea5e9' }}>{idx + 1}</Box>
-                        </ListItemIcon>
-                        <ListItemText primary={s.name} secondary={s.category || s.description} />
-                      </ListItem>
-                    ))}
+                    {classSubjects.map((s, idx) => {
+                      const subjectDisplay = s.subjectName || s.subject_Name || s.subject || s.name || 'Chưa đặt tên';
+                      const subjectSecondary = s.schoolYear || s.category || s.description || '';
+                      return (
+                        <ListItem key={s.id}>
+                          <ListItemIcon sx={{ minWidth: 40 }}>
+                            <Box sx={{ width: 34, height: 34, borderRadius: '50%', background: '#fff !important', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, color: '#0ea5e9' }}>{idx + 1}</Box>
+                          </ListItemIcon>
+                          <ListItemText primary={subjectDisplay} secondary={subjectSecondary} />
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                            <Typography variant="body2" color="text.secondary" sx={{ mr: 1 }}>
+                              {s.assignedTeacherNames || '—'}
+                            </Typography>
+                            <Button size="small" onClick={() => openTeacherDialogFor(s)}>phân công giáo viên</Button>
+                          </Box>
+                        </ListItem>
+                      );
+                    })}
                   </List>
                 </Box>
 
@@ -534,7 +647,7 @@ export default function ClassManagement() {
           <List>
             {assignedTeachers.length === 0 && <Typography color="text.secondary">Chưa có giáo viên nào</Typography>}
             {assignedTeachers.map((t) => (
-              <ListItem key={t.id}><ListItemText primary={t.teacherName || t.name || t.teacherId} secondary={t.schoolYear} /></ListItem>
+              <ListItem key={t.id}><ListItemText primary={t.teacherName || t.name || t.teacherId} secondary={t.subject_Name} /></ListItem>
             ))}
           </List>
 

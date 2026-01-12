@@ -1,0 +1,15 @@
+.tkb-toolbar { margin-bottom: 16px; }
+.tkb-grid { display: grid; grid-template-columns: 120px repeat(7, 1fr); gap: 8px; }
+.tkb-header { background: #ecfdf5; padding: 8px; font-weight: 600; text-align: center; border-radius: 6px; }
+.tkb-cell { min-height: 72px; padding: 6px; background: #f0fdf4; border: 1px solid #e6e6e6; border-radius: 6px; cursor: pointer; }
+.tkb-cell:hover { box-shadow: 0 1px 2px rgba(0,0,0,0.04); }
+.period-cell { background: #fffbeb; display:flex; align-items:center; justify-content:center; font-weight:600; }
+.tkb-item { display:flex; flex-direction:column; gap:4px; }
+.tkb-subject { font-weight:700; color:#0b5cff }
+.tkb-teacher { font-size:12px; color:#374151 }
+.tkb-room { font-size:12px; color:#6b7280 }
+
+/* White panel wrapper for controls and forms */
+.tkb-panel { background: #ffffff; padding: 16px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.06); margin-bottom: 16px; }
+.tkb-toolbar-left { display:flex; gap:12px; align-items:center; }
+.tkb-toolbar-right { display:flex; gap:8px; align-items:center; justify-content:flex-end; }
