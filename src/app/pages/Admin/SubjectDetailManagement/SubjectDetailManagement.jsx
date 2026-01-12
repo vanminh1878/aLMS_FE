@@ -45,6 +45,7 @@ export default function SubjectDetailManagement() {
 	const [loadingContent, setLoadingContent] = useState(false);
 
 	const [searchContent, setSearchContent] = useState("");
+	const [topicSearch, setTopicSearch] = useState("");
 	const [openAddLesson, setOpenAddLesson] = useState(false);
 	const [openAddExercise, setOpenAddExercise] = useState(false);
 	const [openAddTopic, setOpenAddTopic] = useState(false);
@@ -202,6 +203,8 @@ export default function SubjectDetailManagement() {
 					setSelectedTopicId(id);
 					loadTopicContent(id); // Gọi lại để reload ngay
 				}}
+				searchTerm={topicSearch}
+				onSearchChange={setTopicSearch}
 				onOpenAddTopic={() => setOpenAddTopic(true)}
 			/>
 

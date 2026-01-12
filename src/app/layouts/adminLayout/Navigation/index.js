@@ -67,7 +67,7 @@ export default function Navigation() {
     fontFamily: "'Inter', system-ui, -apple-system, sans-serif"
   }}
 >
-   HỆ THỐNG QUẢN LÍ HỌC TẬP
+   HỆ THỐNG QUẢN LÝ HỌC TẬP
 </span>
           </a>
           <hr className="text-secondary mt-3" />

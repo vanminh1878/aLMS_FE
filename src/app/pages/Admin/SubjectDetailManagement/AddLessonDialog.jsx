@@ -162,7 +162,7 @@ const AddLessonDialog = ({ open, onClose, topicId, onSuccess }) => {
             fullWidth
             value={formData.title}
             onChange={handleChange("title")}
-            placeholder="VD: Giới thiệu React cơ bản"
+            placeholder="VD: Giới thiệu về phép cộng"
           />
 
           {/* Mô tả */}

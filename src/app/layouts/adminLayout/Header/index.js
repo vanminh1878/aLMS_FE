@@ -29,7 +29,7 @@ export default function Header() {
   // Xác định tiêu đề trang dựa theo đường dẫn
   const getPageTitle = () => {
     const navItem = navigation.find(item => pathname === item.path);
-    const title = navItem ? navItem.name : " HỆ THỐNG QUẢN LÍ HỌC TẬP";
+    const title = navItem ? navItem.name : " HỆ THỐNG QUẢN LÝ HỌC TẬP";
     console.log(title); // In tiêu đề ra console
     return title;
   };
