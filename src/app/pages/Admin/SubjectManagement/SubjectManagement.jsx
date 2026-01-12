@@ -1,196 +1,102 @@
 // src/components/Admin/SubjectManagement/SubjectManagement.jsx
 import React, { useEffect, useState, useMemo, useCallback } from "react";
-import {
-  Box,
-  Typography,
-  TextField,
-  InputAdornment,
-  Button,
-  Grid,
-  Card,
-  CardContent,
-  CardActions,
-  IconButton,
-  Chip,
-  Skeleton,
-  Zoom,
-  Tooltip,
-  FormControl,
-  InputLabel,
-  Select,
-  MenuItem,
-} from "@mui/material";
+import { Box, Typography, TextField, InputAdornment, Button, IconButton } from "@mui/material";
+import { DataGrid } from "@mui/x-data-grid";
 import SearchIcon from "@mui/icons-material/Search";
-import BookIcon from "@mui/icons-material/Book";
-import ClassIcon from "@mui/icons-material/Class";
 import DeleteForeverIcon from "@mui/icons-material/DeleteForever";
 import EditIcon from "@mui/icons-material/Edit";
 import AddIcon from "@mui/icons-material/Add";
-import { useNavigate } from "react-router-dom";
 
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 
 import { fetchGet, fetchDelete } from "../../../lib/httpHandler.js";
 import AddSubject from "../../../components/Admin/SubjectManagement/AddSubject/AddSubject.jsx";
-import DetailSubject from "../../../components/Admin/SubjectManagement/DetailSubject/DetailSubject.jsx"; // ← Thêm import DetailSubject
+import DetailSubject from "../../../components/Admin/SubjectManagement/DetailSubject/DetailSubject.jsx";
 import { showYesNoMessageBox } from "../../../components/MessageBox/YesNoMessageBox/showYesNoMessgeBox.js";
 import "./SubjectManagement.css";
 
-const GRADE_LABELS = {
-  "1": "Lớp 1",
-  "2": "Lớp 2",
-  "3": "Lớp 3",
-  "4": "Lớp 4",
-  "5": "Lớp 5",
-  "6": "Lớp 6",
-  "7": "Lớp 7",
-  "8": "Lớp 8",
-  "9": "Lớp 9",
-  "10": "Lớp 10",
-  "11": "Lớp 11",
-  "12": "Lớp 12",
-};
-
 export default function SubjectManagement() {
-  const [classes, setClasses] = useState([]);
   const [subjects, setSubjects] = useState([]);
-  const [selectedClassId, setSelectedClassId] = useState(""); // "" = tất cả
-  const [loadingClasses, setLoadingClasses] = useState(true);
-  const [loadingSubjects, setLoadingSubjects] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
+  const [loading, setLoading] = useState(false);
   const [openAdd, setOpenAdd] = useState(false);
-  const [openDetail, setOpenDetail] = useState(false); // ← Thêm state cho dialog detail
-  const [selectedSubject, setSelectedSubject] = useState(null); // ← Thêm state lưu subject đang xem/sửa
-  const navigate = useNavigate();
+  const [selectedSubject, setSelectedSubject] = useState(null);
+  const [openDetail, setOpenDetail] = useState(false);
 
-  // Lấy danh sách lớp học
-  const fetchClasses = useCallback(async () => {
-    setLoadingClasses(true);
-    try {
-      const data = await new Promise((resolve, reject) =>
-        fetchGet("/api/classes", resolve, reject)
-      );
-
-      if (Array.isArray(data)) {
-        const sorted = data.sort((a, b) => {
-          if (a.grade !== b.grade) return a.grade - b.grade;
-          return a.className.localeCompare(b.className);
-        });
-        setClasses(sorted);
-      } else {
-        setClasses([]);
+  const fetchSubjects = useCallback(() => {
+    setLoading(true);
+    fetchGet(
+      "/api/subjects",
+      (data) => {
+        setSubjects(Array.isArray(data) ? data : []);
+        setLoading(false);
+      },
+      () => {
+        toast.error("Lỗi tải danh sách môn học");
+        setSubjects([]);
+        setLoading(false);
       }
-    } catch (err) {
-      console.error("Lỗi tải lớp:", err);
-      toast.error("Không tải được danh sách lớp học");
-      setClasses([]);
-    } finally {
-      setLoadingClasses(false);
-    }
+    );
   }, []);
 
-  // Lấy tất cả môn học (khi chưa chọn lớp)
-  const fetchAllSubjects = async () => {
-    setLoadingSubjects(true);
-    try {
-      const data = await new Promise((resolve, reject) =>
-        fetchGet("/api/subjects", resolve, reject)
-      );
-      setSubjects(Array.isArray(data) ? data : []);
-    } catch (err) {
-      console.error("Lỗi tải tất cả môn học:", err);
-      toast.error("Không tải được danh sách môn học");
-      setSubjects([]);
-    } finally {
-      setLoadingSubjects(false);
-    }
-  };
-
-  // Lấy môn học theo lớp
-  const fetchSubjectsByClass = async (classId) => {
-    setLoadingSubjects(true);
-    try {
-      const data = await new Promise((resolve, reject) =>
-        fetchGet(`/api/subjects/by-class/${classId}`, resolve, reject)
-      );
-      setSubjects(Array.isArray(data) ? data : []);
-    } catch (err) {
-      console.error("Lỗi tải môn học theo lớp:", err);
-      toast.error("Không tải được danh sách môn học");
-      setSubjects([]);
-    } finally {
-      setLoadingSubjects(false);
-    }
-  };
-
-  // Load lớp khi vào trang
   useEffect(() => {
-    fetchClasses();
-  }, [fetchClasses]);
+    fetchSubjects();
+  }, [fetchSubjects]);
 
-  // Load môn học dựa trên selectedClassId
-  useEffect(() => {
-    if (selectedClassId === "") {
-      fetchAllSubjects(); // Hiển thị tất cả môn học
-    } else if (selectedClassId) {
-      fetchSubjectsByClass(selectedClassId);
-    } else {
-      setSubjects([]);
-    }
-  }, [selectedClassId]);
-
-  // Lọc theo từ khóa tìm kiếm
-  const filteredSubjects = useMemo(() => {
+  const filtered = useMemo(() => {
     if (!searchTerm.trim()) return subjects;
-    const term = searchTerm.toLowerCase();
+    const lower = searchTerm.toLowerCase();
     return subjects.filter(
       (s) =>
-        s.name?.toLowerCase().includes(term) ||
-        s.description?.toLowerCase().includes(term) ||
-        s.category?.toLowerCase().includes(term)
+        s.name?.toLowerCase().includes(lower) ||
+        s.description?.toLowerCase().includes(lower) ||
+        s.category?.toLowerCase().includes(lower)
     );
   }, [subjects, searchTerm]);
 
-  // Xóa môn học
   const handleDelete = async (id, name) => {
-    const ok = await showYesNoMessageBox(
-      `Xóa môn học "${name}"? Dữ liệu liên quan về môn học sẽ bị xóa vĩnh viễn.`
-    );
+    const ok = await showYesNoMessageBox(`Xóa môn học "${name}"? Dữ liệu liên quan sẽ bị xóa.`);
     if (!ok) return;
 
     try {
       await fetchDelete(`/api/subjects/${id}`);
-      toast.success(`Đã xóa "${name}"`);
-      setSubjects((prev) => prev.filter((s) => s.id !== id));
-    } catch {
+      toast.success("Đã xóa môn học");
+      setSubjects((prev) => prev.filter((p) => p.id !== id));
+    } catch (err) {
       toast.error("Xóa thất bại");
     }
   };
 
-  // Màu nhóm môn
-  const getCategoryColor = (category) => {
-    const map = {
-      "Tự nhiên": "success",
-      "Xã hội": "info",
-      "Ngoại ngữ": "warning",
-      "Tin học": "secondary",
-      "Thể dục": "error",
-      "Nghệ thuật": "default",
-      "Công nghệ": "primary",
-    };
-    return map[category] || "default";
+  const openEdit = (row) => {
+    setSelectedSubject(row);
+    setOpenDetail(true);
   };
 
-  // Lấy tên lớp + khối của môn học (dùng khi hiển thị tất cả)
-  const getClassInfoForSubject = (subject) => {
-    if (!subject.classId) return { className: "", grade: "" };
-    const cls = classes.find((c) => c.id === subject.classId);
-    return {
-      className: cls?.className || "Không xác định",
-      grade: cls?.grade || "",
-    };
-  };
+  const columns = [
+    { field: "name", headerName: "Tên môn", flex: 1, minWidth: 200 , align: "center",
+    headerAlign: "center",},
+    { field: "category", headerName: "Nhóm môn", flex: 0.6, minWidth: 150,align: "center",
+    headerAlign: "center", },
+    { field: "description", headerName: "Mô tả", flex: 1.2, minWidth: 250,align: "center",
+    headerAlign: "center", },
+    {
+      field: "actions",
+      headerName: "Thao tác",
+      width: 140,
+      sortable: false,
+      renderCell: (params) => (
+        <Box display="flex" gap={0.5}>
+          <IconButton size="small" color="primary" onClick={() => openEdit(params.row)} title="Sửa">
+            <EditIcon />
+          </IconButton>
+          <IconButton size="small" color="error" onClick={() => handleDelete(params.row.id, params.row.name)} title="Xóa">
+            <DeleteForeverIcon />
+          </IconButton>
+        </Box>
+      ),
+    },
+  ];
 
   return (
     <Box className="subject-management-container">
@@ -200,189 +106,46 @@ export default function SubjectManagement() {
         Quản lý Môn học
       </Typography>
 
-      {/* Toolbar */}
-      <Box className="toolbar" sx={{ mb: 4, gap: 3, flexWrap: "wrap", alignItems: "flex-end" }}>
-        <FormControl sx={{ minWidth: 320 }}>
-          <InputLabel>Chọn lớp học</InputLabel>
-          <Select
-            value={selectedClassId}
-            label="Lọc theo lớp học"
-            onChange={(e) => setSelectedClassId(e.target.value)}
-            disabled={loadingClasses}
-          >
-            <MenuItem value="">
-              <em>Tất cả các lớp</em>
-            </MenuItem>
-            {classes.map((cls) => (
-              <MenuItem key={cls.id} value={cls.id}>
-                {cls.className} - {GRADE_LABELS[cls.grade] || `Khối ${cls.grade}`}
-              </MenuItem>
-            ))}
-          </Select>
-        </FormControl>
-
+      <Box className="toolbar" sx={{ mb: 3, display: "flex", gap: 2, alignItems: "center" }}>
         <TextField
           placeholder="Tìm kiếm tên môn, mô tả, nhóm môn..."
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
           size="medium"
-          InputProps={{
-            startAdornment: (
-              <InputAdornment position="start">
-                <SearchIcon />
-              </InputAdornment>
-            ),
-          }}
-          sx={{ flex: 1, maxWidth: 500 }}
+          sx={{ flex: 1, maxWidth: 600 }}
+          InputProps={{ startAdornment: <InputAdornment position="start"><SearchIcon /></InputAdornment> }}
         />
 
-        <Button
-          variant="contained"
-          startIcon={<AddIcon />}
-          onClick={() => setOpenAdd(true)}
-          size="large"
-          disabled={!selectedClassId} // Chỉ cho thêm khi đã chọn lớp cụ thể
-        >
+        <Button variant="contained" startIcon={<AddIcon />} onClick={() => setOpenAdd(true)}>
           Thêm môn học
         </Button>
       </Box>
 
-      {/* Nội dung chính */}
-      {loadingSubjects ? (
-        <Grid container spacing={4}>
-          {[1, 2, 3, 4, 5, 6].map((i) => (
-            <Grid item xs={12} sm={6} md={4} lg={3} key={i}>
-              <Card className="subject-card skeleton">
-                <CardContent>
-                  <Skeleton variant="circular" width={60} height={60} />
-                  <Skeleton variant="text" width="80%" height={40} sx={{ mt: 2 }} />
-                  <Skeleton variant="text" width="60%" />
-                </CardContent>
-              </Card>
-            </Grid>
-          ))}
-        </Grid>
-      ) : filteredSubjects.length === 0 ? (
-        <Box textAlign="center" py={10}>
-          <BookIcon sx={{ fontSize: 80, color: "action.disabled", mb: 2 }} />
-          <Typography variant="h6" color="text.secondary">
-            {selectedClassId === ""
-              ? "Chưa có môn học nào trong hệ thống"
-              : subjects.length === 0
-              ? "Lớp này chưa có môn học nào"
-              : "Không tìm thấy môn học phù hợp"}
-          </Typography>
-        </Box>
-      ) : (
-        <Grid container spacing={4}>
-          {filteredSubjects.map((subject, index) => {
-            const { className, grade } = getClassInfoForSubject(subject);
-            return (
-              <Grid item xs={12} sm={6} md={4} lg={3} key={subject.id}>
-                <Zoom in style={{ transitionDelay: `${index * 70}ms` }}>
-                  <Card
-                    className="subject-card"
-                    raised
-                    onClick={() => navigate(`/admin/subjects/${subject.id}`)}
-                    sx={{ cursor: "pointer", transition: "0.2s", "&:hover": { transform: "translateY(-4px)" } }}
-                  >
-                    <CardContent className="card-content">
-                      <Box className="subject-icon-wrapper">
-                        <BookIcon className="subject-icon" />
-                      </Box>
+      <Box className="table-container">
+        <DataGrid
+          rows={filtered}
+          columns={columns}
+          getRowId={(row) => row.id}
+          pageSizeOptions={[10, 20, 50]}
+          disableRowSelectionOnClick
+          autoHeight
+          loading={loading}
+          localeText={{ noRowsLabel: "Không có môn học nào" }}
+        />
+      </Box>
 
-                      <Typography variant="h5" className="subject-name" gutterBottom>
-                        {subject.name}
-                      </Typography>
-
-                      <Typography variant="body2" color="text.secondary" className="description">
-                        {subject.description || "Chưa có mô tả"}
-                      </Typography>
-
-                      <Box sx={{ mt: 2, display: "flex", flexWrap: "wrap", gap: 1 }}>
-                        {subject.category && (
-                          <Chip
-                            label={subject.category}
-                            color={getCategoryColor(subject.category)}
-                            size="small"
-                            clickable={false} onClick={() => {}}
-                          />
-                        )}
-                        <Chip
-                          icon={<ClassIcon />}
-                          label={
-                            selectedClassId
-                              ? `${className} - ${GRADE_LABELS[grade] || `Khối ${grade}`}`
-                              : `${className} - ${GRADE_LABELS[grade] || `Khối ${grade}`}`
-                          }
-                          size="small"
-                          variant="outlined"
-                          clickable={false} onClick={() => {}}
-                        />
-                      </Box>
-                    </CardContent>
-
-                    <CardActions className="card-actions">
-                      <Tooltip title="Sửa">
-                        <IconButton
-                          size="small"
-                          color="primary"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            const clsInfo = getClassInfoForSubject(subject);
-                            setSelectedSubject({ ...subject, className: clsInfo.className, grade: clsInfo.grade });
-                            setOpenDetail(true);
-                          }}
-                        >
-                          <EditIcon />
-                        </IconButton>
-                      </Tooltip>
-                      <Tooltip title="Xóa">
-                        <IconButton
-                          size="small"
-                          color="error"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleDelete(subject.id, subject.name);
-                          }}
-                        >
-                          <DeleteForeverIcon />
-                        </IconButton>
-                      </Tooltip>
-                    </CardActions>
-                  </Card>
-                </Zoom>
-              </Grid>
-            );
-          })}
-        </Grid>
-      )}
-
-      {/* Dialog thêm môn học */}
-      <AddSubject
-        open={openAdd}
-        onClose={() => setOpenAdd(false)}
-        classId={selectedClassId}
-        onSuccess={() => {
-          if (selectedClassId === "") {
-            fetchAllSubjects();
-          } else {
-            fetchSubjectsByClass(selectedClassId);
-          }
-          setOpenAdd(false);
-        }}
-      />
-
+      <AddSubject open={openAdd} onClose={() => setOpenAdd(false)} onSuccess={fetchSubjects} />
 
       <DetailSubject
         open={openDetail}
-        onClose={() => setOpenDetail(false)}
+        onClose={() => {
+          setOpenDetail(false);
+          setSelectedSubject(null);
+        }}
         subject={selectedSubject}
         onUpdateSuccess={(updated) => {
-          if (updated && updated.id) {
-            setSubjects((prev) => prev.map((s) => (s.id === updated.id ? { ...s, ...updated } : s)));
-            setSelectedSubject((prev) => (prev && prev.id === updated.id ? { ...prev, ...updated } : prev));
-          }
+          setSubjects((prev) => prev.map((s) => (s.id === updated.id ? updated : s)));
+          setSelectedSubject(updated);
           setOpenDetail(false);
         }}
       />

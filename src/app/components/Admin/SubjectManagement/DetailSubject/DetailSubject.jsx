@@ -224,29 +224,7 @@ const DetailSubject = ({ open, onClose, subject, onUpdateSuccess }) => {
             />
           </Grid>
 
-          {/* Thông tin lớp (chỉ hiển thị, không sửa) */}
-          <Grid item xs={12}>
-            <Box
-              display="flex"
-              alignItems="center"
-              gap={2}
-              p={2}
-              bgcolor="#fafafa"
-              borderRadius="12px"
-              border="1px solid #e0e0e0"
-              boxShadow="0 2px 4px rgba(0,0,0,0.05)"
-            >
-              <Box display="flex" alignItems="center" gap={1}>
-                <SchoolIcon fontSize="small" color="action" />
-                <Typography variant="subtitle1" color="textSecondary" fontWeight={500}>
-                  Thuộc lớp
-                </Typography>
-              </Box>
-              <Typography variant="body1" fontWeight={600}>
-                {subject.className || "Chưa xác định"}
-              </Typography>
-            </Box>
-          </Grid>
+
         </Grid>
       </DialogContent>
 
