@@ -9,6 +9,10 @@
 .tkb-teacher { font-size:12px; color:#374151 }
 .tkb-room { font-size:12px; color:#6b7280 }
 
+/* Empty cell styling */
+.tkb-empty { background: #fafafa; border: 1px dashed #e5e7eb; color: #9ca3af; display:flex; align-items:center; justify-content:center; }
+.tkb-empty-label { font-size: 12px; color: #9ca3af; }
+
 /* White panel wrapper for controls and forms */
 .tkb-panel { background: #ffffff; padding: 16px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.06); margin-bottom: 16px; }
 .tkb-toolbar-left { display:flex; gap:12px; align-items:center; }

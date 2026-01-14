@@ -149,7 +149,7 @@ export default function TimetableManagement() {
             {DAYS.map((_, dayIdx) => {
               const item = timetables.find((t) => Number(t.dayOfWeek) === dayIdx && Number(t.periodNumber) === p);
               return (
-                <div key={dayIdx} className="tkb-cell" onClick={() => openCellDialog(dayIdx, p, item)}>
+                <div key={dayIdx} className={`tkb-cell ${item ? "" : "tkb-empty"}`} onClick={() => openCellDialog(dayIdx, p, item)}>
                   {item ? (
                     <div className="tkb-item">
                       <div className="tkb-subject">{item.subjectName || item.subject_Name || item.subject || "-"}</div>
@@ -157,7 +157,7 @@ export default function TimetableManagement() {
                       <div className="tkb-room">{item.room || item.startTime || ""}</div>
                     </div>
                   ) : (
-                    <div style={{ color: '#9ca3af', fontSize: 12 }}>Thêm tiết</div>
+                    <div className="tkb-empty-label">Thêm tiết</div>
                   )}
                 </div>
               );
@@ -195,8 +195,6 @@ export default function TimetableManagement() {
                 <MenuItem value={`${new Date().getFullYear()-1}-${new Date().getFullYear()}`}>{`${new Date().getFullYear()-1}-${new Date().getFullYear()}`}</MenuItem>
               </Select>
             </FormControl>
-
-            <Button variant="contained" onClick={loadTimetable}>Xem TKB</Button>
           </Box>
 
           <Box className="tkb-toolbar-right">

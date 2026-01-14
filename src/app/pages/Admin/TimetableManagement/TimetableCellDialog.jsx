@@ -69,19 +69,19 @@ export default function TimetableCellDialog({ open, onClose, classId, schoolYear
       <DialogContent>
         <Grid container spacing={2} sx={{ pt: 1 }}>
           <Grid item xs={12} sm={6}>
-            <FormControl fullWidth size="small">
+            <FormControl fullWidth size="small" sx={{ minWidth: 260 }}>
               <InputLabel>Môn</InputLabel>
               <Select value={form.subjectId} label="Môn" onChange={(e) => setForm({ ...form, subjectId: e.target.value })}>
                 <MenuItem value="">-- Chọn môn --</MenuItem>
-                {classSubjects.map((s) => (
-                  <MenuItem key={s.subjectId || s.subjectId} value={s.subjectId || s.subjectId}>{s.subjectName || s.subject_Name || s.subject || s.name}</MenuItem>
+                {classSubjects.map((s, idx) => (
+                  <MenuItem key={s.subjectId || s.id || idx} value={s.subjectId || s.subjectId || s.id}>{s.subjectName || s.subject_Name || s.subject || s.name}</MenuItem>
                 ))}
               </Select>
             </FormControl>
           </Grid>
 
           <Grid item xs={12} sm={6}>
-            <FormControl fullWidth size="small">
+            <FormControl fullWidth size="small" sx={{ minWidth: 260 }}>
               <InputLabel>Giáo viên</InputLabel>
               <Select value={form.teacherId} label="Giáo viên" onChange={(e) => setForm({ ...form, teacherId: e.target.value })}>
                 <MenuItem value="">-- Chọn giáo viên --</MenuItem>
@@ -93,10 +93,21 @@ export default function TimetableCellDialog({ open, onClose, classId, schoolYear
           </Grid>
 
           <Grid item xs={6} sm={3}>
-            <TextField fullWidth size="small" label="Thứ" type="number" value={form.dayOfWeek} onChange={(e) => setForm({ ...form, dayOfWeek: e.target.value })} />
+            <FormControl fullWidth size="small">
+              <InputLabel>Thứ</InputLabel>
+              <Select value={String(form.dayOfWeek)} label="Thứ" onChange={(e) => setForm({ ...form, dayOfWeek: Number(e.target.value) })}>
+                <MenuItem value={"0"}>Chủ nhật</MenuItem>
+                <MenuItem value={"1"}>Thứ hai</MenuItem>
+                <MenuItem value={"2"}>Thứ ba</MenuItem>
+                <MenuItem value={"3"}>Thứ tư</MenuItem>
+                <MenuItem value={"4"}>Thứ năm</MenuItem>
+                <MenuItem value={"5"}>Thứ sáu</MenuItem>
+                <MenuItem value={"6"}>Thứ bảy</MenuItem>
+              </Select>
+            </FormControl>
           </Grid>
-          <Grid item xs={6} sm={3}>
-            <TextField fullWidth size="small" label="Tiết" type="number" value={form.periodNumber} onChange={(e) => setForm({ ...form, periodNumber: e.target.value })} />
+          <Grid item xs={6} sm={item ? 3 : 2}>
+            <TextField fullWidth size="small" sx={{ width: 80 }} label="Tiết" type="number" value={form.periodNumber} onChange={(e) => setForm({ ...form, periodNumber: e.target.value })} />
           </Grid>
 
           <Grid item xs={6} sm={3}>
