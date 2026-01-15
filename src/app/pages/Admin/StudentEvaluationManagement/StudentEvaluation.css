@@ -1,0 +1,61 @@
+.se-page {
+  padding: 28px 20px;
+  font-family: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+}
+.se-header {
+  display:flex;
+  align-items:flex-start;
+  gap:12px;
+  margin-bottom:12px;
+}
+.se-header h1 {
+  margin: 0;
+  color: #1f6feb;
+  font-size:22px;
+}
+.se-sub { color: #556678; margin:4px 0 0 0 }
+.se-tabs { border-radius: 14px; padding: 14px; background: linear-gradient(180deg,#ffffff,#fbfdff); box-shadow: 0 10px 30px rgba(31,111,235,0.06); }
+.se-tab-header { display:flex; gap:10px; margin-bottom:14px }
+.se-tab-header button { padding:10px 16px; border-radius:14px; border: none; background:transparent; cursor:pointer; color:#3b4a59; font-weight:600; transition:all .18s }
+.se-tab-header button:hover{ transform:translateY(-2px) }
+.se-tab-header button.active{ background:linear-gradient(90deg,#e6f4ff,#f0fbff); color:#0f1724; box-shadow: 0 6px 18px rgba(31,111,235,0.08)}
+.se-panel .se-controls { display:flex; gap:12px; margin-bottom:16px; flex-wrap:wrap }
+.se-controls label { display:flex; flex-direction:column; font-size:13px; color:#2d3748 }
+.se-controls input, .se-controls select { padding:10px 12px; border-radius:10px; border:1px solid #e6eef8; width:180px; background:#fbfdff }
+.se-list { display:flex; flex-direction:column; gap:14px }
+.se-card { display:flex; gap:14px; padding:14px; border-radius:12px; background:linear-gradient(90deg,#ffffff,#fbfdff); border:1px solid #eef4ff; align-items:flex-start }
+.se-card:hover { transform:translateY(-4px); box-shadow: 0 14px 30px rgba(31,111,235,0.06); transition: all .18s }
+.se-card-left { width:220px; display:flex; gap:12px; align-items:center }
+.avatar { width:56px; height:56px; border-radius:50%; background:linear-gradient(135deg,#ffe7d6,#fff4eb); display:flex; align-items:center; justify-content:center; font-weight:700; color:#7a2b00; box-shadow: 0 6px 18px rgba(122,43,0,0.06) }
+.student-name { font-weight:800; color:#0f1724; font-size:16px }
+.student-class { color:#64748b; font-size:13px }
+.se-card-right { display:flex; flex-direction:column; gap:10px; flex:1 }
+.row { display:flex; gap:12px; align-items:center; flex-wrap:wrap }
+.field { display:flex; flex-direction:column; min-width:160px }
+.field input, .field select { padding:8px 10px; border-radius:8px; border:1px solid #e6eef8; background:#fff }
+.se-table { display:table; width:100%; border-collapse:collapse }
+.se-table thead th { text-align:left; padding:10px; background:#f8fbff; border-bottom:1px solid #e6eef8 }
+.se-table tbody td { padding:10px; border-bottom:1px solid #f1f5f9 }
+.se-table input, .se-table select { width:100%; padding:6px 8px; border-radius:6px; border:1px solid #e6eef8 }
+.se-table th, .se-table td { vertical-align:middle }
+.se-table .empty { text-align:center; padding:18px; color:#64748b }
+.se-table-homeroom thead th { background:#f7fbf9 }
+.se-table-homeroom thead tr:nth-child(1) th { background:#eefaf6 }
+.score-bubble { min-width:64px; padding:8px 12px; border-radius:999px; font-weight:800; display:inline-flex; align-items:center; justify-content:center; color:white }
+.score-high { background:linear-gradient(90deg,#00c48c,#00a86b) }
+.score-mid { background:linear-gradient(90deg,#ffd166,#ff9f1c); color:#2b2b2b }
+.score-low { background:linear-gradient(90deg,#ff7a7a,#ff4d4d) }
+.level-badge { padding:6px 10px; border-radius:999px; background:#f0f7ff; color:#1e3a8a; font-weight:700; font-size:13px }
+.se-actions { display:flex; gap:8px }
+.btn { display:inline-flex; gap:8px; align-items:center; padding:8px 12px; border-radius:10px; border:none; cursor:pointer; font-weight:700 }
+.btn-save { background:linear-gradient(90deg,#1f6feb,#2bb0ff); color:white }
+.btn-search { background: linear-gradient(90deg,#f0f7ff,#d6eeff); color:#0f1724; border:1px solid #dbeffc }
+.btn-search:hover { filter:brightness(.98); transform:translateY(-1px) }
+.btn-ghost { background:transparent; color:#1f6feb; border:1px solid #e6f0ff }
+.empty { padding:28px; color:#64748b; text-align:center }
+.subject-comments { margin-top:8px; border-top:1px dashed #eef4ff; padding-top:10px }
+.subject-comment { font-size:13px; color:#25303a; margin-bottom:6px }
+.add-subject-comment input { margin-right:6px; padding:8px 10px; border-radius:8px }
+.qualities { margin-top:8px }
+.quality-row { font-size:13px; color:#25303a; margin-bottom:6px }
+.add-subject-comment button, .add-quality button { padding:8px 10px; border-radius:10px; border:none; background:#fff7ed; color:#92400e; cursor:pointer }
