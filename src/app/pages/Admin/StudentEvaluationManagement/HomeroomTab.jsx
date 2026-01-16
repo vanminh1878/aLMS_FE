@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { getByClass, getByStudent, createEvaluation, updateEvaluation, postQualityEvaluation } from "../../../lib/studentEvaluationService";
+import { createEvaluation, updateEvaluation, postQualityEvaluation } from "../../../lib/studentEvaluationService";
 import { fetchGet } from "../../../lib/httpHandler";
 
 const defaultSemester = "Học kỳ 1";
@@ -21,18 +21,30 @@ const HomeroomTab = () => {
 
   useEffect(() => {
     if (classId) {
-      // reuse by-class to fetch students in class
-      getByClass(classId, semester, schoolYear,
+      // Lấy danh sách học sinh theo classId
+      fetchGet(`/api/student-profiles/by-class/${classId}`,
         (data) => {
-          setStudents((data || []).map(s => ({ ...s, qualities: {}, subjectScores: {} })));
-          // placeholder teacher name
+          const arr = Array.isArray(data) ? data : [];
+          // Map API response to object dùng trong UI
+          const mapped = arr.map((it) => ({
+            studentId: it.userId,
+            studentName: it.userName,
+            email: it.email,
+            schoolId: it.schoolId,
+            schoolName: it.schoolName,
+            classId: it.classId,
+            className: it.className,
+            enrollDate: it.enrollDate,
+            qualities: {},
+            subjectScores: {},
+          }));
+          setStudents(mapped);
           setTeacherName("GVCN: Nguyễn A");
         },
-        (err) => console.error(err),
-        () => console.error("exception")
+        (err) => console.error(err)
       );
     }
-  }, [classId, semester, schoolYear]);
+  }, [classId]);
 
   useEffect(() => {
     const accountId = localStorage.getItem("accountId");
@@ -133,10 +145,24 @@ const HomeroomTab = () => {
 
   const handleFetchStudents = () => {
     if (!classId) return alert("Vui lòng chọn Lớp trước khi tìm.");
-    getByClass(classId, semester, schoolYear,
-      (data) => setStudents((data || []).map(s => ({ ...s, qualities: {}, subjectScores: {} }))),
-      (err) => console.error(err),
-      () => console.error("exception")
+    fetchGet(`/api/student-profiles/by-class/${classId}`,
+      (data) => {
+        const arr = Array.isArray(data) ? data : [];
+        const mapped = arr.map((it) => ({
+          studentId: it.userId,
+          studentName: it.userName,
+          email: it.email,
+          schoolId: it.schoolId,
+          schoolName: it.schoolName,
+          classId: it.classId,
+          className: it.className,
+          enrollDate: it.enrollDate,
+          qualities: {},
+          subjectScores: {},
+        }));
+        setStudents(mapped);
+      },
+      (err) => console.error(err)
     );
   };
 
@@ -204,7 +230,6 @@ const HomeroomTab = () => {
             <tr>
               <th rowSpan={subjectsForClass && subjectsForClass.length > 0 ? 3 : 2}>STT</th>
               <th rowSpan={subjectsForClass && subjectsForClass.length > 0 ? 3 : 2}>Họ và tên</th>
-              <th rowSpan={subjectsForClass && subjectsForClass.length > 0 ? 3 : 2}>Ngày sinh</th>
               <th rowSpan={subjectsForClass && subjectsForClass.length > 0 ? 3 : 2}>Giới tính</th>
               {subjectsForClass && subjectsForClass.length > 0 ? (
                 <th colSpan={subjectsForClass.length * subjectMetrics.length}>Môn học</th>
@@ -238,14 +263,13 @@ const HomeroomTab = () => {
           <tbody>
             {students.length === 0 ? (
               <tr>
-                <td colSpan={4 + (subjectsForClass && subjectsForClass.length > 0 ? subjectsForClass.length * subjectMetrics.length : 1) + qualityKeys.length + 2} className="empty">Không có dữ liệu. Nhập mã lớp và chọn kỳ/năm.</td>
+                <td colSpan={3 + (subjectsForClass && subjectsForClass.length > 0 ? subjectsForClass.length * subjectMetrics.length : 1) + qualityKeys.length + 2} className="empty">Không có dữ liệu. Nhập mã lớp và chọn kỳ/năm.</td>
               </tr>
             ) : (
               students.map((s, idx) => (
                 <tr key={s.studentId}>
                   <td>{idx + 1}</td>
                   <td>{s.studentName}</td>
-                  <td>{s.dob || s.dateOfBirth || '-'}</td>
                   <td>{s.gender || '-'}</td>
                   {subjectsForClass && subjectsForClass.length > 0 ? (
                     // render subject metric cells per subject

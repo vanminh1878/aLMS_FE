@@ -118,6 +118,8 @@ useEffect(() => {
       setTimeout(() => nameRef.current?.focus(), 100);
     }
     if (open) {
+      // reset form and saving state when dialog opens to avoid leftover spinner/icon state
+      setSaving(false);
       setFormData(prev => ({ ...prev, className: "", grade: "" }));
     }
   }, [open]);
@@ -180,7 +182,7 @@ useEffect(() => {
   };
 
   return (
-    <Dialog open={open} onClose={handleCancel} maxWidth="sm" fullWidth>
+    <Dialog className="add-class-dialog" open={open} onClose={handleCancel} maxWidth="sm" fullWidth>
       <DialogTitle>
         <Box display="flex" alignItems="center" justifyContent="space-between">
           <Box display="flex" alignItems="center" gap={1.5}>
@@ -301,7 +303,7 @@ useEffect(() => {
 
       <Divider />
 
-      <DialogActions sx={{ p: 3, gap: 2 }}>
+        <DialogActions sx={{ p: 3, gap: 2 }}>
         <Button
           variant="outlined"
           startIcon={<CancelIcon />}
@@ -313,7 +315,7 @@ useEffect(() => {
         </Button>
         <Button
           variant="contained"
-          startIcon={saving ? <CircularProgress size={20} /> : <SaveIcon />}
+            startIcon={saving ? <CircularProgress size={20} /> : <SaveIcon />}
           onClick={handleSave}
           disabled={saving || loading || !formData.schoolId}
           size="large"

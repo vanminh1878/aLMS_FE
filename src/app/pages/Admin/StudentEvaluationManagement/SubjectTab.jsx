@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { getByClass, createEvaluation, updateEvaluation } from "../../../lib/studentEvaluationService";
+import { createEvaluation, updateEvaluation } from "../../../lib/studentEvaluationService";
 import { fetchGet } from "../../../lib/httpHandler";
 
 const defaultSemester = "Học kỳ 1";
@@ -17,13 +17,28 @@ const SubjectTab = () => {
 	const [students, setStudents] = useState([]);
 
 	useEffect(() => {
-		if (classId) {
-			getByClass(classId, semester, schoolYear,
-				(data) => setStudents(data || []),
-				(err) => console.error(err),
-				() => console.error("exception")
-			);
-		}
+			if (classId) {
+				fetchGet(`/api/student-profiles/by-class/${classId}`,
+					(data) => {
+						const arr = Array.isArray(data) ? data : [];
+						const mapped = arr.map((it) => ({
+							studentId: it.userId,
+							studentName: it.userName,
+							email: it.email,
+							schoolId: it.schoolId,
+							schoolName: it.schoolName,
+							classId: it.classId,
+							className: it.className,
+							enrollDate: it.enrollDate,
+							finalEvaluation: it.finalEvaluation || '',
+							ck1: it.ck1 || '',
+							xlck1: it.xlck1 || '',
+						}));
+						setStudents(mapped);
+					},
+					(err) => console.error(err)
+				);
+			}
 	}, [classId, semester, schoolYear]);
 
 	useEffect(() => {
@@ -116,10 +131,25 @@ const SubjectTab = () => {
 
 	const handleFetchStudents = () => {
 		if (!classId) return alert("Vui lòng chọn Lớp trước khi tìm.");
-		getByClass(classId, semester, schoolYear,
-			(data) => setStudents(data || []),
-			(err) => console.error(err),
-			() => console.error("exception")
+		fetchGet(`/api/student-profiles/by-class/${classId}`,
+			(data) => {
+				const arr = Array.isArray(data) ? data : [];
+				const mapped = arr.map((it) => ({
+					studentId: it.userId,
+					studentName: it.userName,
+					email: it.email,
+					schoolId: it.schoolId,
+					schoolName: it.schoolName,
+					classId: it.classId,
+					className: it.className,
+					enrollDate: it.enrollDate,
+					finalEvaluation: it.finalEvaluation || '',
+					ck1: it.ck1 || '',
+					xlck1: it.xlck1 || '',
+				}));
+				setStudents(mapped);
+			},
+			(err) => console.error(err)
 		);
 	};
 
@@ -176,23 +206,21 @@ const SubjectTab = () => {
 				<table className="se-table">
 					<thead>
 						<tr>
-							<th>STT</th>
-							<th>Họ và tên</th>
-							<th>Ngày sinh</th>
-							<th>Nhận xét cuối kì</th>
-							<th>KT CK1</th>
-							<th>XL CK1</th>
+							    <th>STT</th>
+								    <th>Họ và tên</th>
+								    <th>Nhận xét cuối kì</th>
+								    <th>KT CK1</th>
+								    <th>XL CK1</th>
 						</tr>
 					</thead>
 					<tbody>
 						{students.length === 0 ? (
-							<tr><td colSpan={6} className="empty">Không có dữ liệu. Nhập mã lớp và chọn kỳ/năm.</td></tr>
+							<tr><td colSpan={5} className="empty">Không có dữ liệu. Nhập mã lớp và chọn kỳ/năm.</td></tr>
 						) : (
 							students.map((s, idx) => (
 								<tr key={s.studentId}>
 									<td>{idx + 1}</td>
 									<td>{s.studentName}</td>
-									<td>{s.dob || s.dateOfBirth || '-'}</td>
 									<td>
 										<input value={s.finalEvaluation || ''} onChange={(e) => { s.finalEvaluation = e.target.value; setStudents([...students]); }} />
 									</td>

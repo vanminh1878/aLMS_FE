@@ -25,6 +25,7 @@ export default function Navigation() {
     
     // Nội dung học tập
     { name: "Môn học", path: "/admin/subject-management", icon: <FaBookOpen className="fs-5 icon" /> },
+    { name: "Sổ liên lạc", path: "/admin/student-evaluation", icon: <FaClipboardList className="fs-5 icon" /> },
     { name: "Thời khóa biểu", path: "/admin/timetable-management", icon: <FaCalendarAlt className="fs-5 icon" /> },
     // { name: "Chủ đề & Bài học", path: "/admin/topics-lesson-management", icon: <FaClipboardList className="fs-5 icon" /> },
     // { name: "Bài tập & Câu hỏi", path: "/admin/exercise-management", icon: <FaTasks className="fs-5 icon" /> },

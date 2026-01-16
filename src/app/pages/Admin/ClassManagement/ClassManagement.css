@@ -77,7 +77,8 @@
   position: relative;
   display: flex;
   flex-direction: column;
-  margin-top: -45px !important;
+  margin-top: 0;
+  margin-bottom: 1rem;
 }
 
 .class-card::before {

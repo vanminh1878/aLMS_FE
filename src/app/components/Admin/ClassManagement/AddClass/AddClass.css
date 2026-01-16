@@ -73,3 +73,14 @@
 .detail-school-dialog .MuiSelect-nativeInput {
   opacity: 1 !important;
 }
+
+/* Reset any unexpected transform/rotation on dialog button icons (prevent spinner/icon persisting rotated) */
+.add-class-dialog .MuiButton-root .MuiSvgIcon-root,
+.add-class-dialog .MuiButton-root .MuiCircularProgress-root,
+.add-class-dialog .MuiDialogActions-root .MuiButton-startIcon svg {
+  transform: none !important;
+}
+
+.add-class-dialog .MuiDialogActions-root .MuiButton-root {
+  min-width: 140px;
+}

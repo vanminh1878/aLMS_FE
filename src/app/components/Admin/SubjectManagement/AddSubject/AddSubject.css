@@ -1,0 +1,10 @@
+/* Ensure icons/spinners inside AddSubject dialog are not rotated/persisting transforms */
+.add-subject-dialog .MuiButton-root .MuiSvgIcon-root,
+.add-subject-dialog .MuiButton-root .MuiCircularProgress-root,
+.add-subject-dialog .MuiDialogActions-root .MuiButton-startIcon svg {
+  transform: none !important;
+}
+
+.add-subject-dialog .MuiDialogActions-root .MuiButton-root {
+  min-width: 140px;
+}

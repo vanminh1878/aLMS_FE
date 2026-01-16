@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
+import "./AddSubject.css";
 import {
   Dialog,
   DialogTitle,
@@ -34,6 +35,8 @@ const AddSubject = ({ open, onClose, onSuccess }) => {
 
   useEffect(() => {
     if (open) {
+      // reset form and saving state when dialog opens to avoid leftover spinner/icon state
+      setSaving(false);
       setForm({ name: "", description: "", category: "" });
       setTimeout(() => nameRef.current?.focus(), 150);
     }
@@ -66,7 +69,7 @@ const AddSubject = ({ open, onClose, onSuccess }) => {
   };
 
   return (
-    <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth>
+    <Dialog className="add-subject-dialog" open={open} onClose={onClose} maxWidth="md" fullWidth>
       <DialogTitle>
         <Box display="flex" alignItems="center" justifyContent="space-between">
           <Box display="flex" alignItems="center" gap={2}>
