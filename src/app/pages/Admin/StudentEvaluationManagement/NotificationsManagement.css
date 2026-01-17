@@ -1,2 +1,4 @@
 .nm-root { padding: 8px }
-.nm-root .nm-list-item { border-bottom: 1px solid #eee }
+.nm-root .nm-list-item { border-bottom: 1px solid #eee; padding: 12px 8px; }
+.nm-root .nm-list-item:hover { background: #fbfbfb }
+.nm-root .nm-list-item .MuiIconButton-root { margin-right: 8px }

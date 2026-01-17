@@ -1,5 +1,8 @@
 import React, { useEffect, useState } from "react";
 import { Box, Button, Dialog, DialogTitle, DialogContent, DialogActions, TextField, FormControl, InputLabel, Select, MenuItem, List, ListItem, ListItemText, IconButton } from "@mui/material";
+import MailOutlineIcon from '@mui/icons-material/MailOutline';
+import MarkEmailReadIcon from '@mui/icons-material/MarkEmailRead';
+import CircularProgress from '@mui/material/CircularProgress';
 import { fetchGet, fetchPost, fetchPut, fetchDelete } from "../../../lib/httpHandler";
 import { toast } from "react-toastify";
 import "./NotificationsManagement.css";
@@ -8,6 +11,7 @@ export default function NotificationsManagement({ classIdProp }) {
   const [classId, setClassId] = useState(classIdProp || "");
   const [classOptions, setClassOptions] = useState([]);
   const [notifications, setNotifications] = useState([]);
+  const [marking, setMarking] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState(null);
   const [schoolId, setSchoolId] = useState("");
@@ -109,7 +113,14 @@ export default function NotificationsManagement({ classIdProp }) {
   };
 
   const markRead = async (id) => {
-    try { await new Promise((res, rej) => fetchPost(`/api/notifications/${id}/mark-read`, null, res, rej)); loadList(); } catch (e) { console.error(e); }
+    try {
+      const res = await fetch(`/api/notifications/${id}/mark-read`, { method: 'POST', headers: { 'Content-Type': 'application/json' } });
+      if (res && res.status === 200) {
+        loadList();
+      } else {
+        console.error('Mark-read failed, status:', res?.status);
+      }
+    } catch (e) { console.error(e); }
   };
 
   return (
@@ -123,21 +134,39 @@ export default function NotificationsManagement({ classIdProp }) {
           </Select>
         </FormControl>
         <Button variant="contained" onClick={openCreate}>Tạo thông báo</Button>
-        <Button onClick={loadList}>Tải lại</Button>
       </Box>
 
       <List>
-        {notifications.map((n) => (
-          <ListItem key={n.id} secondaryAction={(
-            <span>
-              <Button size="small" onClick={() => markRead(n.id)}>Đánh dấu đã đọc</Button>
-              <Button size="small" onClick={() => openEdit(n)}>Sửa</Button>
-              <Button size="small" color="error" onClick={() => remove(n.id)}>Xóa</Button>
-            </span>
-          )}>
-            <ListItemText primary={n.title} secondary={`${n.createdByName || ''} — ${n.startTime ? new Date(n.startTime).toLocaleString() : ''}`} />
-          </ListItem>
-        ))}
+        {notifications.map((n) => {
+          const isRead = n.isRead || n.read || n.isViewed || false;
+          return (
+            <ListItem key={n.id} className="nm-list-item" alignItems="flex-start" sx={{ display: 'flex', gap: 2 }}>
+              <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                <IconButton size="small" onClick={() => { if (!isRead && !marking) { setMarking(n.id); markRead(n.id).finally(() => setMarking('')); } }}>
+                  {marking === n.id ? <CircularProgress size={18} /> : (isRead ? <MarkEmailReadIcon color="action" /> : <MailOutlineIcon color="primary" />)}
+                </IconButton>
+              </Box>
+
+              <Box sx={{ flex: 1 }}>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 2 }}>
+                  <Box component="div">
+                    <Box component="div" sx={{ fontSize: '1rem', fontWeight: 700 }}>{n.title}</Box>
+                    <Box component="div" sx={{ fontSize: '0.9rem', color: 'text.secondary', mt: 0.5 }}>{n.content}</Box>
+                  </Box>
+                  <Box sx={{ textAlign: 'right', minWidth: 120 }}>
+                    <Box sx={{ fontSize: '0.8rem', color: 'text.secondary' }}>{n.createdByName || ''}</Box>
+                    <Box sx={{ fontSize: '0.75rem', color: 'text.secondary' }}>{n.startTime ? new Date(n.startTime).toLocaleString() : ''}</Box>
+                  </Box>
+                </Box>
+
+                <Box sx={{ display: 'flex', gap: 1, mt: 1 }}>
+                  <Button size="small" onClick={() => openEdit(n)}>Sửa</Button>
+                  <Button size="small" color="error" onClick={() => remove(n.id)}>Xóa</Button>
+                </Box>
+              </Box>
+            </ListItem>
+          );
+        })}
       </List>
 
       <Dialog open={dialogOpen} onClose={() => setDialogOpen(false)} maxWidth="md" fullWidth>
