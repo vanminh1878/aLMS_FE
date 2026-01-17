@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from "react";
-import { createEvaluation, updateEvaluation, postQualityEvaluation } from "../../../lib/studentEvaluationService";
+import { createEvaluation, updateEvaluation, postQualityEvaluation, postSubjectComment } from "../../../lib/studentEvaluationService";
 import { fetchGet } from "../../../lib/httpHandler";
 import { getByClass as getFinalRecordsByClass } from "../../../lib/finalTermRecordService";
+import { Snackbar, Alert } from "@mui/material";
 
 const defaultSemester = "Học kỳ 1";
 const defaultYear = "2025-2026";
@@ -10,6 +11,17 @@ const qualityKeys = ["Yêu nước", "Nhân ái", "Chăm chỉ", "Trung thực",
 const subjectMetrics = ["KT CK", "XL CK"];
 
 const HomeroomTab = () => {
+  const [toastOpen, setToastOpen] = useState(false);
+  const [toastMessage, setToastMessage] = useState("");
+  const [toastSeverity, setToastSeverity] = useState("success");
+  const [currentUserId, setCurrentUserId] = useState(null);
+
+  const showToast = (message, severity = "success") => {
+    setToastMessage(message);
+    setToastSeverity(severity);
+    setToastOpen(true);
+  };
+
   const [grade, setGrade] = useState("");
   const [classId, setClassId] = useState("");
   const [semester, setSemester] = useState(defaultSemester);
@@ -84,6 +96,9 @@ const HomeroomTab = () => {
                   fetchGet(`/api/accounts/by-account/${accountId}`, resolve, reject, () => reject("exception"));
                 });
                 const homeroomTeacherId = user?.id || user?.teacherId || null;
+                // store the current user's id for CreatedBy fields
+                const uid = user?.id || user?.userId || accountId || null;
+                setCurrentUserId(uid);
                 if (homeroomTeacherId) {
                   const classes = await new Promise((resolve, reject) => {
                       fetchGet(`/api/classes/by-homeroom-teacher/${homeroomTeacherId}`, resolve, reject, () => reject("exception"));
@@ -140,9 +155,24 @@ const HomeroomTab = () => {
   }, [classId]);
 
   const handleBulkSave = async () => {
-    if (!classId) return alert("Vui lòng chọn Khối và Lớp");
-    const promises = [];
+    if (!classId) return showToast("Vui lòng chọn Lớp trước khi lưu.", "warning");
+
+    // mapping of quality names to ids (provided)
+    const qualityIdMap = {
+      "Yêu nước": "2de3dda7-1db5-4f28-8a36-adf21be860de",
+      "Nhân ái": "165688a0-5cd3-403a-8e06-52fc2d80ba17",
+      "Chăm chỉ": "6d89b1f7-b54a-481d-bb43-491c565e4024",
+      "Trung thực": "ba5ba78d-e7da-4b01-a86b-2177d48dcd21",
+      "Trách nhiệm": "d1b97e59-03e5-4810-adc5-49b56be6a251",
+      "Đánh giá": "51534d2b-6965-4954-96d3-7cc480cb99c2",
+    };
+
+    const accountId = localStorage.getItem("accountId") || localStorage.getItem("userId") || null;
+    const createdBy = currentUserId || accountId || null;
+    const allPromises = [];
+
     for (const s of students) {
+      // create student-evaluation
       const payload = {
         studentId: s.studentId,
         classId,
@@ -153,29 +183,83 @@ const HomeroomTab = () => {
         generalComment: s.generalComment || "",
         finalEvaluation: s.finalEvaluation || "",
       };
-      if (s.id) promises.push(updateEvaluation(s.id, payload, () => {}, (e) => console.error(e), () => {}));
-      else promises.push(createEvaluation(payload, () => {}, (e) => console.error(e), () => {}));
 
-      // qualities
-      if (s.qualities) {
-        for (const qKey of Object.keys(s.qualities)) {
-          const qVal = s.qualities[qKey];
-          // postQualityEvaluation expects qualityId; we'll pass qKey as id for now
-          promises.push(postQualityEvaluation(s.id || "", { studentEvaluationId: s.id || "", qualityId: qKey, qualityLevel: qVal }, () => {}, (e) => console.error(e), () => {}));
+      // attach CreatedBy when available (use currentUserId fetched from account endpoint)
+      if (createdBy) payload.CreatedBy = createdBy;
+
+      const evalPromise = new Promise((resolve, reject) => {
+        // if we have an existing evaluation id, update instead of create
+        if (s.evaluationId) {
+          updateEvaluation(s.evaluationId, payload,
+            (updated) => resolve(updated),
+            (err) => { console.error('updateEvaluation failed', err); resolve(null); },
+            (ex) => { console.error('updateEvaluation exception', ex); resolve(null); }
+          );
+        } else {
+          createEvaluation(payload,
+            (created) => resolve(created),
+            (err) => { console.error('createEvaluation failed', err); resolve(null); },
+            (ex) => { console.error('createEvaluation exception', ex); resolve(null); }
+          );
         }
-      }
+      });
+
+      const chain = evalPromise.then((created) => {
+        const evaluationId = (created && (created.id || created.evaluationId)) || null;
+        if (evaluationId) {
+          // persist evaluationId on the student object for future updates
+          s.evaluationId = evaluationId;
+          try { setStudents([...students]); } catch (e) { /* ignore */ }
+        }
+        const subPromises = [];
+        // post subject comments for this evaluation
+        if (evaluationId && s.subjectScores) {
+          for (const subjectId of Object.keys(s.subjectScores)) {
+            const sc = s.subjectScores[subjectId];
+            const comment = sc && sc.comment;
+            if (comment !== undefined && comment !== null) {
+              const body = { studentEvaluationId: evaluationId, subjectId, comment };
+              if (createdBy) body.CreatedBy = createdBy;
+              subPromises.push(new Promise((res, rej) => {
+                postSubjectComment(evaluationId, body, (r) => res(r), (err) => { console.error('postSubjectComment fail', err); res(null); }, (ex) => { console.error('postSubjectComment ex', ex); res(null); });
+              }));
+            }
+          }
+        }
+
+        // post quality evaluations
+        if (evaluationId && s.qualities) {
+          for (const qName of Object.keys(s.qualities)) {
+            const qLevel = s.qualities[qName];
+            const qId = qualityIdMap[qName];
+            if (qId) {
+              const qBody = { studentEvaluationId: evaluationId, qualityId: qId, qualityLevel: qLevel };
+              if (createdBy) qBody.CreatedBy = createdBy;
+              subPromises.push(new Promise((res, rej) => {
+                postQualityEvaluation(evaluationId, qBody, (r) => res(r), (err) => { console.error('postQualityEvaluation fail', err); res(null); }, (ex) => { console.error('postQualityEvaluation ex', ex); res(null); });
+              }));
+            }
+          }
+        }
+
+        // resolve when all subcalls done
+        return Promise.all(subPromises);
+      });
+
+      allPromises.push(chain);
     }
+
     try {
-      await Promise.all(promises);
-      alert("Lưu sổ liên lạc thành công");
+      await Promise.all(allPromises);
+      showToast('Lưu sổ liên lạc thành công', 'success');
     } catch (e) {
       console.error(e);
-      alert("Lỗi khi lưu. Kiểm tra console.");
+      showToast('Lỗi khi lưu. Kiểm tra console.', 'error');
     }
   };
 
   const handleFetchStudents = () => {
-    if (!classId) return alert("Vui lòng chọn Lớp trước khi tìm.");
+    if (!classId) return showToast("Vui lòng chọn Lớp trước khi tìm.", "warning");
     fetchGet(`/api/student-profiles/by-class/${classId}`,
       (data) => {
         const arr = Array.isArray(data) ? data : [];
@@ -341,6 +425,11 @@ const HomeroomTab = () => {
           </tbody>
         </table>
       </div>
+      <Snackbar open={toastOpen} autoHideDuration={4000} onClose={() => setToastOpen(false)} anchorOrigin={{ vertical: 'top', horizontal: 'right' }}>
+        <Alert onClose={() => setToastOpen(false)} severity={toastSeverity} sx={{ width: '100%' }}>
+          {toastMessage}
+        </Alert>
+      </Snackbar>
     </div>
   );
 };
