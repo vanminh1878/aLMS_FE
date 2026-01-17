@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { createEvaluation, updateEvaluation, postQualityEvaluation } from "../../../lib/studentEvaluationService";
 import { fetchGet } from "../../../lib/httpHandler";
+import { getByClass as getFinalRecordsByClass } from "../../../lib/finalTermRecordService";
 
 const defaultSemester = "Học kỳ 1";
 const defaultYear = "2025-2026";
@@ -23,7 +24,7 @@ const HomeroomTab = () => {
     if (classId) {
       // Lấy danh sách học sinh theo classId
       fetchGet(`/api/student-profiles/by-class/${classId}`,
-        (data) => {
+        async (data) => {
           const arr = Array.isArray(data) ? data : [];
           // Map API response to object dùng trong UI
           const mapped = arr.map((it) => ({
@@ -38,6 +39,31 @@ const HomeroomTab = () => {
             qualities: {},
             subjectScores: {},
           }));
+
+          // Try to load existing final-term records for this class and map into per-student subjectScores
+          try {
+            const url = `/api/final-term-records/class/${classId}`;
+            console.log('HomeroomTab: requesting final-term-records for classId:', classId, 'URL:', url);
+            const records = await new Promise((resolve, reject) => {
+              getFinalRecordsByClass(classId, resolve, reject, () => reject(new Error("Network error")));
+            });
+            const recArr = Array.isArray(records) ? records : [];
+            console.log('HomeroomTab: final-term-records response count:', recArr.length, recArr.slice(0,5));
+            for (const r of recArr) {
+              const student = mapped.find(m => m.studentId === r.studentProfileId);
+              if (student) {
+                student.subjectScores = student.subjectScores || {};
+                student.subjectScores[r.subjectId] = student.subjectScores[r.subjectId] || {};
+                // map API fields to UI metric names
+                student.subjectScores[r.subjectId]["KT CK"] = r.finalScore;
+                student.subjectScores[r.subjectId]["XL CK"] = r.finalEvaluation;
+                student.subjectScores[r.subjectId].comment = r.comment;
+              }
+            }
+          } catch (e) {
+            console.warn('HomeroomTab: Không tải được final-term-records cho lớp:', e);
+          }
+
           setStudents(mapped);
           setTeacherName("GVCN: Nguyễn A");
         },
@@ -181,7 +207,13 @@ const HomeroomTab = () => {
     const copy = [...students];
     const ss = copy[studentIndex].subjectScores || {};
     if (!ss[subjectId]) ss[subjectId] = {};
-    ss[subjectId][metric] = value;
+    // store numeric values for KT CK, keep strings for XL CK
+    if (metric === "KT CK") {
+      const num = value === '' ? '' : Number(value);
+      ss[subjectId][metric] = num;
+    } else {
+      ss[subjectId][metric] = value;
+    }
     copy[studentIndex].subjectScores = ss;
     setStudents(copy);
   };
@@ -190,21 +222,10 @@ const HomeroomTab = () => {
     <div className="se-panel">
       <div className="se-controls">
         <label>
-          Khối
-          <select value={grade} onChange={(e) => setGrade(e.target.value)}>
-            <option value="">--Chọn Khối--</option>
-            <option value="1">Khối 1</option>
-            <option value="2">Khối 2</option>
-            <option value="3">Khối 3</option>
-            <option value="4">Khối 4</option>
-            <option value="5">Khối 5</option>
-          </select>
-        </label>
-        <label>
           Lớp
           <select value={classId} onChange={(e) => setClassId(e.target.value)}>
             <option value="">--Chọn Lớp--</option>
-            {classOptions.filter(c => !grade || String(c.grade) === String(grade) || (c.className || "").startsWith(String(grade))).map((c) => (
+            {classOptions.map((c) => (
               <option key={c.classId} value={c.classId}>{c.className}</option>
             ))}
           </select>
@@ -229,20 +250,17 @@ const HomeroomTab = () => {
         </div>
       </div>
 
-      <div className="se-table-wrap">
-        <table className="se-table se-table-homeroom">
+      <div className="se-table-wrap" style={{ overflowX: 'auto' }}>
+        <table className="se-table se-table-homeroom" style={{ minWidth: subjectsForClass && subjectsForClass.length ? 600 + subjectsForClass.length * 140 : 1000 }}>
           <thead>
-            <tr>
-              <th rowSpan={subjectsForClass && subjectsForClass.length > 0 ? 3 : 2}>STT</th>
+              <tr>
+                <th rowSpan={subjectsForClass && subjectsForClass.length > 0 ? 3 : 2}>STT</th>
               <th rowSpan={subjectsForClass && subjectsForClass.length > 0 ? 3 : 2}>Họ và tên</th>
-              <th rowSpan={subjectsForClass && subjectsForClass.length > 0 ? 3 : 2}>Giới tính</th>
               {subjectsForClass && subjectsForClass.length > 0 ? (
                 <th colSpan={subjectsForClass.length * subjectMetrics.length}>Môn học</th>
               ) : (
                 <th rowSpan={2}>Môn học</th>
               )}
-              <th rowSpan={subjectsForClass && subjectsForClass.length > 0 ? 3 : 2}>Đánh giá</th>
-              <th rowSpan={subjectsForClass && subjectsForClass.length > 0 ? 3 : 2}>Ghi chú</th>
             </tr>
             {subjectsForClass && subjectsForClass.length > 0 ? (
               <tr>
@@ -257,31 +275,40 @@ const HomeroomTab = () => {
               </tr>
             )}
             {subjectsForClass && subjectsForClass.length > 0 ? (
-              <tr>
+                <tr>
                 {subjectsForClass.map((sub) => (
-                  subjectMetrics.map((m) => <th key={sub.subjectId + m}>{m}</th>)
+                  subjectMetrics.map((m) => <th key={sub.subjectId + m} style={{ minWidth: 110 }}>{m}</th>)
                 ))}
                 {qualityKeys.map((q) => <th key={q}>{q}</th>)}
+                <th>Đánh giá</th>
+                <th>Ghi chú</th>
               </tr>
             ) : null}
           </thead>
           <tbody>
-            {students.length === 0 ? (
+              {students.length === 0 ? (
               <tr>
-                <td colSpan={3 + (subjectsForClass && subjectsForClass.length > 0 ? subjectsForClass.length * subjectMetrics.length : 1) + qualityKeys.length + 2} className="empty">Không có dữ liệu. Nhập mã lớp và chọn kỳ/năm.</td>
+                <td colSpan={2 + (subjectsForClass && subjectsForClass.length > 0 ? subjectsForClass.length * subjectMetrics.length : 1) + qualityKeys.length + 2} className="empty">Không có dữ liệu. Nhập mã lớp và chọn kỳ/năm.</td>
               </tr>
             ) : (
               students.map((s, idx) => (
                 <tr key={s.studentId}>
-                  <td>{idx + 1}</td>
-                  <td>{s.studentName}</td>
-                  <td>{s.gender || '-'}</td>
+                  <td style={{ minWidth: 40 }}>{idx + 1}</td>
+                  <td style={{ minWidth: 180 }}>{s.studentName}</td>
                   {subjectsForClass && subjectsForClass.length > 0 ? (
                     // render subject metric cells per subject
                     subjectsForClass.map((sub) => (
                       subjectMetrics.map((m) => (
                         <td key={sub.subjectId + m}>
-                          <input value={(s.subjectScores && s.subjectScores[sub.subjectId] && s.subjectScores[sub.subjectId][m]) || ''} onChange={(e) => handleSubjectMetricChange(idx, sub.subjectId, m, e.target.value)} />
+                          {m === "KT CK" ? (
+                            <div style={{ width: 56, textAlign: 'center' }}>
+                              {(s.subjectScores && s.subjectScores[sub.subjectId] && (s.subjectScores[sub.subjectId][m] !== undefined ? s.subjectScores[sub.subjectId][m] : '')) || ''}
+                            </div>
+                          ) : (
+                            <div style={{ width: 100 }}>
+                              {(s.subjectScores && s.subjectScores[sub.subjectId] && (s.subjectScores[sub.subjectId][m] !== undefined ? s.subjectScores[sub.subjectId][m] : '')) || ''}
+                            </div>
+                          )}
                         </td>
                       ))
                     ))
@@ -290,7 +317,7 @@ const HomeroomTab = () => {
                   )}
                   {qualityKeys.map((q) => (
                     <td key={q}>
-                      <select value={(s.qualities && s.qualities[q]) || ''} onChange={(e) => handleQualityChange(idx, q, e.target.value)}>
+                      <select style={{ width: 90 }} value={(s.qualities && s.qualities[q]) || ''} onChange={(e) => handleQualityChange(idx, q, e.target.value)}>
                         <option value="">--</option>
                         <option value="A">A</option>
                         <option value="B">B</option>
@@ -299,10 +326,14 @@ const HomeroomTab = () => {
                     </td>
                   ))}
                   <td>
-                    <input value={s.finalEvaluation || ''} onChange={(e) => { s.finalEvaluation = e.target.value; setStudents([...students]); }} />
+                    <select style={{ width: 110 }} value={s.homeroomEvaluation || ''} onChange={(e) => { s.homeroomEvaluation = e.target.value; setStudents([...students]); }}>
+                      <option value="">--</option>
+                      <option value="Đạt">Đạt</option>
+                      <option value="Chưa đạt">Chưa đạt</option>
+                    </select>
                   </td>
                   <td>
-                    <input value={s.note || ''} onChange={(e) => { s.note = e.target.value; setStudents([...students]); }} />
+                    <input style={{ width: 160 }} value={s.homeroomNote || ''} onChange={(e) => { s.homeroomNote = e.target.value; setStudents([...students]); }} />
                   </td>
                 </tr>
               ))
