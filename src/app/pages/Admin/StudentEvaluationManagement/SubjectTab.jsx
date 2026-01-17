@@ -147,19 +147,20 @@ const SubjectTab = ({ classId: propClassId, subjectId: propSubjectId, schoolYear
 			const finalPayload = {
 				studentProfileId: s.studentId,
 				classId: classId,
+				subjectId: subject,
 				finalScore: Number(s.finalScore) || 0,
 				finalEvaluation: s.finalEvaluation || "",
 				comment: s.comment || "",
 			};
 			if (s.finalRecordId) {
 				// API expects id in body for PUT
-				return updateFinalRecord({ id: s.finalRecordId, finalScore: finalPayload.finalScore, finalEvaluation: finalPayload.finalEvaluation, comment: finalPayload.comment }, () => {}, (err) => console.error(err), () => {});
+				return updateFinalRecord({ id: s.finalRecordId, subjectId: subject, finalScore: finalPayload.finalScore, finalEvaluation: finalPayload.finalEvaluation, comment: finalPayload.comment }, () => {}, (err) => console.error(err), () => {});
 			}
 			return createFinalRecord(finalPayload, () => {}, (err) => console.error(err), () => {});
 		});
 		try {
 			await Promise.all(promises);
-			toast.success("Lưu nhập điểm thành công");
+			//toast.success("Lưu nhập điểm thành công");
 			// show local snackbar immediately
 			setLocalSaveSuccess(true);
 			// allow local snackbar to render before reloading list
