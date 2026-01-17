@@ -1,6 +1,9 @@
 import React, { useEffect, useState } from "react";
 import { createEvaluation, updateEvaluation } from "../../../lib/studentEvaluationService";
 import { fetchGet } from "../../../lib/httpHandler";
+import { toast } from "react-toastify";
+import { Snackbar, Alert } from "@mui/material";
+import { getByClass as getFinalRecordsByClass, getByStudent as getFinalRecordsByStudent, createRecord as createFinalRecord, updateRecord as updateFinalRecord } from "../../../lib/finalTermRecordService";
 
 const defaultSemester = "Học kỳ 1";
 const defaultYear = "2025-2026";
@@ -15,6 +18,8 @@ const SubjectTab = ({ classId: propClassId, subjectId: propSubjectId, schoolYear
 	const [semester, setSemester] = useState(defaultSemester);
 	const [schoolYear, setSchoolYear] = useState(defaultYear);
 	const [students, setStudents] = useState([]);
+	const [localSaveSuccess, setLocalSaveSuccess] = useState(false);
+	const [localSaveError, setLocalSaveError] = useState(false);
 
 	useEffect(() => {
 		// sync props if provided
@@ -24,7 +29,7 @@ const SubjectTab = ({ classId: propClassId, subjectId: propSubjectId, schoolYear
 
 		if (classId) {
 				fetchGet(`/api/student-profiles/by-class/${classId}`,
-					(data) => {
+					async (data) => {
 						const arr = Array.isArray(data) ? data : [];
 						const mapped = arr.map((it) => ({
 							studentId: it.userId,
@@ -36,9 +41,35 @@ const SubjectTab = ({ classId: propClassId, subjectId: propSubjectId, schoolYear
 							className: it.className,
 							enrollDate: it.enrollDate,
 							finalEvaluation: it.finalEvaluation || '',
+							finalScore: it.finalScore || 0,
+							comment: it.comment || '',
+							// legacy fields kept for compatibility
 							ck1: it.ck1 || '',
 							xlck1: it.xlck1 || '',
+							finalRecordId: null,
 						}));
+
+						// load existing final-term records for this class and merge
+						try {
+							const records = await new Promise((resolve, reject) => {
+								getFinalRecordsByClass(classId, resolve, reject, () => reject(new Error("Network error")));
+							});
+							const recArr = Array.isArray(records) ? records : [];
+							const byStudent = {};
+							recArr.forEach(r => { byStudent[r.studentProfileId] = r; });
+							for (const s of mapped) {
+								const r = byStudent[s.studentId];
+								if (r) {
+									s.finalScore = r.finalScore;
+									s.finalEvaluation = r.finalEvaluation;
+									s.comment = r.comment;
+									s.finalRecordId = r.id;
+								}
+							}
+						} catch (e) {
+							console.warn('Không tải được final-term-records cho lớp:', e);
+						}
+
 						setStudents(mapped);
 					},
 					(err) => console.error(err)
@@ -110,34 +141,40 @@ const SubjectTab = ({ classId: propClassId, subjectId: propSubjectId, schoolYear
 	}, [classId]);
 
 	const handleBulkSave = async () => {
-		if (!classId || !subject) return alert("Vui lòng chọn Khối/Lớp/Môn trước khi lưu.");
+		if (!classId || !subject) return toast.error("Vui lòng chọn Khối/Lớp/Môn trước khi lưu.");
 		const promises = students.map((s) => {
-			const payload = {
-				studentId: s.studentId,
+			// Create or update final-term-record for each student
+			const finalPayload = {
+				studentProfileId: s.studentId,
 				classId: classId,
-				semester,
-				schoolYear,
 				finalScore: Number(s.finalScore) || 0,
-				level: s.level || "",
-				generalComment: s.finalEvaluationComment || s.generalComment || "",
 				finalEvaluation: s.finalEvaluation || "",
+				comment: s.comment || "",
 			};
-			if (s.id) return updateEvaluation(s.id, payload, () => {}, (err) => console.error(err), () => {});
-			return createEvaluation(payload, () => {}, (err) => console.error(err), () => {});
+			if (s.finalRecordId) {
+				// API expects id in body for PUT
+				return updateFinalRecord({ id: s.finalRecordId, finalScore: finalPayload.finalScore, finalEvaluation: finalPayload.finalEvaluation, comment: finalPayload.comment }, () => {}, (err) => console.error(err), () => {});
+			}
+			return createFinalRecord(finalPayload, () => {}, (err) => console.error(err), () => {});
 		});
 		try {
 			await Promise.all(promises);
-			alert("Lưu tất cả thành công");
+			toast.success("Lưu nhập điểm thành công");
+			// show local snackbar immediately
+			setLocalSaveSuccess(true);
+			// allow local snackbar to render before reloading list
+			setTimeout(() => handleFetchStudents(), 300);
 		} catch (e) {
 			console.error(e);
-			alert("Lỗi khi lưu. Kiểm tra console.");
+			toast.error("Lỗi khi lưu. Kiểm tra console.");
+			setLocalSaveError(true);
 		}
 	};
 
 	const handleFetchStudents = () => {
-		if (!classId) return alert("Vui lòng chọn Lớp trước khi tìm.");
+		if (!classId) return toast.error("Vui lòng chọn Lớp trước khi tìm.");
 		fetchGet(`/api/student-profiles/by-class/${classId}`,
-			(data) => {
+			(async (data) => {
 				const arr = Array.isArray(data) ? data : [];
 				const mapped = arr.map((it) => ({
 					studentId: it.userId,
@@ -151,9 +188,37 @@ const SubjectTab = ({ classId: propClassId, subjectId: propSubjectId, schoolYear
 					finalEvaluation: it.finalEvaluation || '',
 					ck1: it.ck1 || '',
 					xlck1: it.xlck1 || '',
+					finalScore: it.finalScore || 0,
+					comment: it.comment || '',
+					finalRecordId: null,
 				}));
+
+				// Try to load existing final-term records for the class and map to students
+				try {
+					const records = await new Promise((resolve, reject) => {
+						getFinalRecordsByClass(classId, resolve, reject, () => reject(new Error("Network error")));
+					});
+					const recArr = Array.isArray(records) ? records : [];
+					const byStudent = {};
+					recArr.forEach(r => {
+						byStudent[r.studentProfileId] = r;
+					});
+					// attach records to mapped students
+					for (const s of mapped) {
+						const r = byStudent[s.studentId];
+						if (r) {
+							s.finalScore = r.finalScore;
+							s.finalEvaluation = r.finalEvaluation;
+							s.comment = r.comment;
+							s.finalRecordId = r.id;
+						}
+					}
+				} catch (e) {
+					console.warn('Không tải được final-term-records cho lớp:', e);
+				}
+
 				setStudents(mapped);
-			},
+			}),
 			(err) => console.error(err)
 		);
 	};
@@ -221,12 +286,12 @@ const SubjectTab = ({ classId: propClassId, subjectId: propSubjectId, schoolYear
 					<thead>
 						<tr>
 							    <th>STT</th>
-								    <th>Họ và tên</th>
-								    <th>Nhận xét cuối kì</th>
-								    <th>KT CK1</th>
-								    <th>XL CK1</th>
+							    <th>Họ và tên</th>
+							    <th>KT CK1</th>
+							    <th>XL CK1</th>
+							    <th>Nhận xét cuối kì</th>
 						</tr>
-					</thead>
+						</thead>
 					<tbody>
 						{students.length === 0 ? (
 							<tr><td colSpan={5} className="empty">Không có dữ liệu. Nhập mã lớp và chọn kỳ/năm.</td></tr>
@@ -236,19 +301,36 @@ const SubjectTab = ({ classId: propClassId, subjectId: propSubjectId, schoolYear
 									<td>{idx + 1}</td>
 									<td>{s.studentName}</td>
 									<td>
-										<input value={s.finalEvaluation || ''} onChange={(e) => { s.finalEvaluation = e.target.value; setStudents([...students]); }} />
+										{/* KT CK1 -> finalScore (narrow column) */}
+										<input
+											type="number"
+											style={{ width: 80 }}
+											value={s.finalScore ?? ""}
+											onChange={(e) => {
+												const v = e.target.value;
+												const num = v === "" ? "" : Number(v);
+												if (v !== "" && (isNaN(num) || num < 0 || num > 10)) {
+													toast.warn("Điểm phải nằm trong khoảng 0 - 10");
+													return;
+												}
+												s.finalScore = num === "" ? 0 : num;
+												setStudents([...students]);
+											}}
+										/>
 									</td>
 									<td>
-										<input value={s.ck1 || ''} onChange={(e) => { s.ck1 = e.target.value; setStudents([...students]); }} />
-									</td>
-									<td>
-										<select value={s.xlck1 || ''} onChange={(e) => { s.xlck1 = e.target.value; setStudents([...students]); }}>
+										{/* XL CK1 -> finalEvaluation (store via combobox values) */}
+										<select value={s.finalEvaluation || ''} onChange={(e) => { s.finalEvaluation = e.target.value; setStudents([...students]); }}>
 											<option value="">--Chọn--</option>
-											<option>Xuất sắc</option>
-											<option>Tốt</option>
-											<option>Khá</option>
-											<option>Trung bình</option>
+											<option value="Xuất sắc">Xuất sắc</option>
+											<option value="Tốt">Tốt</option>
+											<option value="Khá">Khá</option>
+											<option value="Trung bình">Trung bình</option>
 										</select>
+									</td>
+									<td>
+										{/* Nhận xét cuối kì -> comment */}
+										<input value={s.comment || ''} onChange={(e) => { s.comment = e.target.value; setStudents([...students]); }} />
 									</td>
 								</tr>
 							))
@@ -256,6 +338,18 @@ const SubjectTab = ({ classId: propClassId, subjectId: propSubjectId, schoolYear
 					</tbody>
 				</table>
 			</div>
+
+				{/* Local snackbar fallback for immediate feedback */}
+				<Snackbar open={localSaveSuccess} autoHideDuration={3000} onClose={() => setLocalSaveSuccess(false)} anchorOrigin={{ vertical: 'top', horizontal: 'right' }}>
+					<Alert onClose={() => setLocalSaveSuccess(false)} severity="success" sx={{ width: '100%' }}>
+						Lưu nhập điểm thành công
+					</Alert>
+				</Snackbar>
+				<Snackbar open={localSaveError} autoHideDuration={3000} onClose={() => setLocalSaveError(false)} anchorOrigin={{ vertical: 'top', horizontal: 'right' }}>
+					<Alert onClose={() => setLocalSaveError(false)} severity="error" sx={{ width: '100%' }}>
+						Lỗi khi lưu. Kiểm tra console.
+					</Alert>
+				</Snackbar>
 		</div>
 	);
 };
