@@ -118,10 +118,40 @@ export default function TeachingManagement() {
 
   const subjectsForClass = subjects.filter(s => String(s.classId) === String(selectedClassId));
 
-  const openVirtual = (timetableItemOrSlot) => {
+  const openVirtual = async (timetableItemOrSlot) => {
     // timetableItemOrSlot may be a timetable item (has id) or a slot { dayOfWeek, periodNumber }
     const timetableId = timetableItemOrSlot?.id || null;
-    const found = timetableId ? virtuals.find(v => String(v.timetableId) === String(timetableId)) : null;
+    // if caller passed a virtual object (from virtuals list) with its own id, prefer that
+    const passedVirtualId = timetableItemOrSlot?.id && virtuals.some(vv => String(vv.id) === String(timetableItemOrSlot.id)) ? timetableItemOrSlot.id : null;
+    const found = passedVirtualId ? virtuals.find(v => String(v.id) === String(passedVirtualId)) : (timetableId ? virtuals.find(v => String(v.timetableId) === String(timetableId)) : null);
+    // if caller passed a virtual id (existing room), fetch full details
+    if (passedVirtualId) {
+      try {
+        const data = await new Promise((res, rej) => fetchGet(`/api/virtual-classrooms/${passedVirtualId}`, res, rej, () => rej('ex')));
+        if (data) {
+          // populate form with server copy
+          setVirtualForm({
+            id: data.id,
+            timetableId: data.timetableId || null,
+            dayOfWeek: data.dayOfWeek ?? timetableItemOrSlot?.dayOfWeek ?? null,
+            periodNumber: data.periodNumber ?? timetableItemOrSlot?.periodNumber ?? null,
+            title: data.title || "",
+            meetingUrl: data.meetingUrl || "",
+            meetingId: data.meetingId || "",
+            password: data.password || "",
+            startTime: data.startTime ? new Date(data.startTime).toISOString().slice(0,16) : "",
+            endTime: data.endTime ? new Date(data.endTime).toISOString().slice(0,16) : "",
+            isRecurring: !!data.isRecurring,
+            subjectId: data.subjectId || selectedSubjectId || "",
+            lockTimes: !!(data.timetableId || data.dayOfWeek != null),
+          });
+          setVirtualDialogOpen(true);
+          return;
+        }
+      } catch (err) {
+        console.error('Không tải chi tiết phòng ảo', err);
+      }
+    }
     if (found) {
       setVirtualForm({
         id: found.id,
@@ -138,12 +168,12 @@ export default function TeachingManagement() {
         subjectId: found.subjectId || selectedSubjectId || "",
       });
     } else {
-      setVirtualForm({ id: null, timetableId: timetableId, dayOfWeek: timetableItemOrSlot?.dayOfWeek ?? null, periodNumber: timetableItemOrSlot?.periodNumber ?? null, title: `${timetableItemOrSlot?.subjectName || ''} - Tiết ${timetableItemOrSlot?.periodNumber || ''}`, meetingUrl: "", meetingId: "", password: "", startTime: "", endTime: "", isRecurring: false, subjectId: selectedSubjectId || "" });
+      setVirtualForm({ id: null, timetableId: timetableId, dayOfWeek: timetableItemOrSlot?.dayOfWeek ?? null, periodNumber: timetableItemOrSlot?.periodNumber ?? null, title: `${timetableItemOrSlot?.subjectName || ''} - Tiết ${timetableItemOrSlot?.periodNumber || ''}`, meetingUrl: "", meetingId: "", password: "", startTime: "", endTime: "", isRecurring: false, subjectId: selectedSubjectId || "", lockTimes: !!timetableItemOrSlot });
+      setVirtualDialogOpen(true);
     }
-    setVirtualDialogOpen(true);
   };
 
-  const closeVirtual = () => { setVirtualDialogOpen(false); setVirtualForm({ id: null, timetableId: null, dayOfWeek: null, periodNumber: null, title: "", meetingUrl: "", meetingId: "", password: "", startTime: "", endTime: "", isRecurring: false, subjectId: "" }); };
+  const closeVirtual = () => { setVirtualDialogOpen(false); setVirtualForm({ id: null, timetableId: null, dayOfWeek: null, periodNumber: null, title: "", meetingUrl: "", meetingId: "", password: "", startTime: "", endTime: "", isRecurring: false, subjectId: "", lockTimes: false }); };
 
   const saveVirtual = async () => {
     try {
@@ -161,6 +191,11 @@ export default function TeachingManagement() {
       };
       if (virtualForm.id) {
         await new Promise((res, rej) => fetchPut(`/api/virtual-classrooms/${virtualForm.id}`, payload, res, rej));
+        console.log('saveVirtual: PUT success, closing dialog');
+        closeVirtual();
+        // refresh list (best-effort)
+        fetchGet(`/api/virtual-classrooms/by-class/${selectedClassId}?upcoming=false`, (data) => setVirtuals(Array.isArray(data) ? data : []), () => {});
+        return;
       } else {
         // include dayOfWeek and periodNumber for slot-based creation
         const createPayload = { ...payload };
@@ -183,9 +218,12 @@ export default function TeachingManagement() {
           console.error('Không lấy được user để gán CreatedBy', err);
         }
         await new Promise((res, rej) => fetchPost(`/api/virtual-classrooms`, createPayload, res, rej));
+        console.log('saveVirtual: POST success, closing dialog');
+        closeVirtual();
+        // refresh list (best-effort)
+        fetchGet(`/api/virtual-classrooms/by-class/${selectedClassId}?upcoming=false`, (data) => setVirtuals(Array.isArray(data) ? data : []), () => {});
+        return;
       }
-      fetchGet(`/api/virtual-classrooms/by-class/${selectedClassId}?upcoming=false`, (data) => setVirtuals(Array.isArray(data) ? data : []), () => {});
-      closeVirtual();
     } catch (e) { console.error(e); alert('Lưu phòng ảo thất bại'); }
   };
 
@@ -273,7 +311,7 @@ export default function TeachingManagement() {
                                 <div className="tkb-subject">{item.subjectName || item.subject_Name || item.subject || "-"}</div>
                                 <div className="tkb-teacher">{item.teacherName || item.teacher || "-"}</div>
                                 <div style={{ marginTop: 6 }}>
-                                  {v ? <Button size="small" variant="outlined" onClick={() => openVirtual(item)}>Xem/Chỉnh phòng</Button>
+                                   {v ? <Button size="small" variant="outlined" onClick={() => openVirtual(v)}>Xem/Chỉnh phòng</Button>
                                      : (isOwnLesson ? <Button size="small" variant="contained" onClick={() => openVirtual(item)}>Tạo phòng</Button>
                                      : <div className="tkb-disabled-label">Lớp đã có tiết khác</div>)}
                                 </div>
@@ -283,7 +321,7 @@ export default function TeachingManagement() {
                                 {v ? (
                                   <div>
                                     <div className="tkb-empty-label">Phòng học ảo</div>
-                                    <Button size="small" variant="outlined" onClick={() => openVirtual({ dayOfWeek: dayIdx, periodNumber: p })}>Xem/Chỉnh phòng</Button>
+                                    <Button size="small" variant="outlined" onClick={() => openVirtual(v)}>Xem/Chỉnh phòng</Button>
                                   </div>
                                 ) : (
                                   <Button size="small" variant="contained" onClick={() => openVirtual({ dayOfWeek: dayIdx, periodNumber: p })}>Tạo phòng</Button>
