@@ -63,7 +63,7 @@ const ExerciseList = ({ exercises = [], selectedExercise, onSelectExercise, sear
           setLoadingOverview(false);
         },
         (err) => {
-          toast.error("Lỗi tải thống kê lớp: " + (err.title || "Unknown error"));
+          //toast.error("Lỗi tải thống kê lớp: " + (err.title || "Unknown error"));
           setClassOverview(null);
           setLoadingOverview(false);
         }
@@ -203,7 +203,7 @@ const ExerciseList = ({ exercises = [], selectedExercise, onSelectExercise, sear
                 </Box>
               ) : (
                 <Typography color="error" textAlign="center" py={6}>
-                  Không tải được thống kê lớp
+                  Chưa có thống kê lớp
                 </Typography>
               )}
             </Box>

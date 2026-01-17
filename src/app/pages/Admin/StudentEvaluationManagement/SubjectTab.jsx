@@ -5,7 +5,7 @@ import { fetchGet } from "../../../lib/httpHandler";
 const defaultSemester = "Học kỳ 1";
 const defaultYear = "2025-2026";
 
-const SubjectTab = () => {
+const SubjectTab = ({ classId: propClassId, subjectId: propSubjectId, schoolYear: propSchoolYear, hideTopControls = false, onRegisterActions }) => {
 	const [grade, setGrade] = useState("");
 	const [classId, setClassId] = useState("");
 	const [subject, setSubject] = useState("");
@@ -17,7 +17,12 @@ const SubjectTab = () => {
 	const [students, setStudents] = useState([]);
 
 	useEffect(() => {
-			if (classId) {
+		// sync props if provided
+		if (propClassId) setClassId(propClassId);
+		if (propSubjectId) setSubject(propSubjectId);
+		if (propSchoolYear) setSchoolYear(propSchoolYear);
+
+		if (classId) {
 				fetchGet(`/api/student-profiles/by-class/${classId}`,
 					(data) => {
 						const arr = Array.isArray(data) ? data : [];
@@ -39,7 +44,7 @@ const SubjectTab = () => {
 					(err) => console.error(err)
 				);
 			}
-	}, [classId, semester, schoolYear]);
+	}, [classId, semester, schoolYear, propClassId, propSubjectId, propSchoolYear]);
 
 	useEffect(() => {
 		const accountId = localStorage.getItem("accountId");
@@ -153,8 +158,16 @@ const SubjectTab = () => {
 		);
 	};
 
+	// register actions to parent if requested
+	useEffect(() => {
+		if (typeof onRegisterActions === 'function') {
+			onRegisterActions({ fetchStudents: handleFetchStudents, saveAll: handleBulkSave });
+		}
+	}, [onRegisterActions, classId, subject, semester, schoolYear, students]);
+
 	return (
 		<div className="se-panel">
+			{!hideTopControls && (
 			<div className="se-controls">
 				<label>
 					Khối
@@ -201,6 +214,7 @@ const SubjectTab = () => {
 					<button className="btn btn-save" onClick={handleBulkSave}>Lưu</button>
 				</div>
 			</div>
+			)}
 
 			<div className="se-table-wrap">
 				<table className="se-table">

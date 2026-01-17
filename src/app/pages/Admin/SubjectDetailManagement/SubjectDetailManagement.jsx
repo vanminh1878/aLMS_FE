@@ -26,8 +26,9 @@ import TopicContent from "./TopicContent.jsx";
 import AddLessonDialog from "./AddLessonDialog.jsx";
 import AddExerciseDialog from "./AddExerciseDialog.jsx";
 
-export default function SubjectDetailManagement() {
-	const { subjectId } = useParams();
+export default function SubjectDetailManagement({ subjectId: propSubjectId }) {
+	const params = useParams();
+	const subjectId = propSubjectId || params.subjectId;
 	const navigate = useNavigate();
 
 	const [subject, setSubject] = useState(null);
@@ -60,7 +61,7 @@ export default function SubjectDetailManagement() {
 				setLoadingSubject(false);
 			},
 			() => {
-				toast.error("Lỗi tải môn học");
+				//toast.error("Lỗi tải môn học");
 				setLoadingSubject(false);
 			}
 		);
@@ -78,7 +79,7 @@ export default function SubjectDetailManagement() {
 					setSelectedTopicId(list[0].id);
 				}
 			},
-			() => toast.error("Không tải được chủ đề")
+			// () => toast.error("Không tải được chủ đề")
 		).finally(() => setLoadingTopics(false));
 	};
 

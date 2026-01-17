@@ -16,6 +16,7 @@ import BehaviourManagement from "../pages/Admin/BehaviourManagement/BehaviourMan
 import AccountManagement from "../pages/Admin/AccountManagement/AccountManagement.jsx";
 import TimetableManagement from "../pages/Admin/TimetableManagement/TimetableManagement";
 import StudentEvaluationManagement from "../pages/Admin/StudentEvaluationManagement/index";
+import TeachingManagement from "../pages/Admin/TeachingManagement/TeachingManagement";
 import AccountManagementStudent from "../pages/Student/AccountManagement/AccountManagement.jsx";
 import AccountManagementParent from "../pages/Parent/AccountManagement/AccountManagement.jsx";
 import StatisticMnagement from "../pages/Admin/StatisticManagement/StatisticManagement.jsx";
@@ -52,6 +53,7 @@ export default function MainRoutes() {
             <Route path="student-management" element={<StudentManagement />} />
             <Route path="timetable-management" element={<TimetableManagement />} />
             <Route path="student-evaluation" element={<StudentEvaluationManagement />} />
+            <Route path="teaching-management" element={<TeachingManagement />} />
             <Route path="subject-management" element={<SubjectManagement />} />
             <Route path="/admin/subjects/:subjectId" element={<SubjectDetailManagement />} />
             <Route path="teacher-management" element={<DepartmentManagement />} />

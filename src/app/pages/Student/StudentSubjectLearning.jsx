@@ -169,7 +169,7 @@ const StudentSubjectLearning = ({ onClose }) => {
       const data = await res.json();
       setSubjects((prev) => ({ ...prev, [classId]: data || [] }));
     } catch (err) {
-      toast.error(err.message || "Lỗi tải môn học");
+      //toast.error(err.message || "Lỗi tải môn học");
       setSubjects((prev) => ({ ...prev, [classId]: [] }));
     } finally {
       setLoadingSubjects(false);
