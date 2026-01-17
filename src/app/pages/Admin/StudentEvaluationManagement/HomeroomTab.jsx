@@ -53,18 +53,23 @@ const HomeroomTab = () => {
     const fetchClassesAndMappings = async () => {
       try {
         if (accountId) {
-          const user = await new Promise((resolve, reject) => {
-            fetchGet(`/api/accounts/by-account/${accountId}`, resolve, reject, () => reject("exception"));
-          });
-          const schoolId = user?.schoolId;
-          if (schoolId) {
-            const classes = await new Promise((resolve, reject) => {
-              fetchGet(`/api/classes/by-school/${schoolId}`, resolve, reject, () => reject("exception"));
-            });
-            const clsArr = Array.isArray(classes) ? classes : [];
-            setClassOptions(clsArr.map((cls) => ({ classId: cls.id || cls.classId, className: cls.className, grade: cls.grade || cls.gradeId })));
-          }
-        }
+              try {
+                const user = await new Promise((resolve, reject) => {
+                  fetchGet(`/api/accounts/by-account/${accountId}`, resolve, reject, () => reject("exception"));
+                });
+                const homeroomTeacherId = user?.id || user?.teacherId || null;
+                if (homeroomTeacherId) {
+                  const classes = await new Promise((resolve, reject) => {
+                      fetchGet(`/api/classes/by-homeroom-teacher/${homeroomTeacherId}`, resolve, reject, () => reject("exception"));
+                    });
+                    const clsArrRaw = Array.isArray(classes) ? classes : (classes ? [classes] : []);
+                    setClassOptions(clsArrRaw.map((cls) => ({ classId: cls.id || cls.classId, className: cls.className || cls.name, grade: cls.grade || cls.gradeId })));
+                }
+              } catch (err) {
+                console.error('Error loading classes by homeroom teacher', err);
+                setClassOptions([]);
+              }
+            }
       } catch (err) {
         console.error("Error loading classes by school:", err);
         setClassOptions([]);
