@@ -1,3 +1,12 @@
 .tm-root { padding: 12px; }
 .tm-root .tm-controls { display:flex; gap:12px; align-items:center }
 .tm-root .tm-tabs { margin-top:12px }
+ .tkb-grid { display:grid; grid-template-columns: 80px repeat(7, 1fr); gap:6px }
+ .tkb-header.cell { background:#f5f5f5; padding:8px; font-weight:600; }
+ .tkb-cell { min-height:80px; background:#fff; border:1px solid #e0e0e0; padding:8px; }
+ .tkb-empty { background:#fafafa; display:flex; align-items:center; justify-content:center; }
+ .tkb-item .tkb-subject { font-weight:600 }
+ .tkb-empty-label { color:#666 }
+ .tkb-empty-item { display:flex; flex-direction:column; align-items:center; justify-content:center; gap:6px }
+ .tkb-cell.not-mine { background:#fff0f0; border-color:#ffd6d6 }
+ .tkb-disabled-label { color:#a00; font-weight:600 }
