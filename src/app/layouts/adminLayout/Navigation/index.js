@@ -42,6 +42,42 @@ export default function Navigation() {
 
   const { pathname } = useLocation();
 
+  // Lấy role từ localStorage để điều khiển hiển thị menu
+  const roleName = (localStorage.getItem("roleName") || "").toLowerCase();
+
+  // Định nghĩa bộ menu cho từng role
+  const teacherPaths = [
+    "/admin/statistic-management",
+    "/admin/timetable-management",
+    "/admin/student-evaluation",
+    "/admin/teaching-management",
+    "/admin/behaviour-management",
+    "/admin/account-management",
+  ];
+
+  const adminOnlyPaths = ["/admin/school-management", "/admin/account-management"];
+
+  // Lọc navigation theo role
+  const filteredNavigation = navigation.filter((item) => {
+    if (!roleName) return false;
+
+    if (roleName.includes("giáo viên") || roleName.includes("giaó viên") || roleName.includes("giao vien")) {
+      return teacherPaths.includes(item.path);
+    }
+
+    if (roleName.includes("quản lí nhà trường") || roleName.includes("quản lý nhà trường") || roleName.includes("quan ly nha truong") || roleName.includes("quản lí")) {
+      // Quản lí nhà trường: hiện tất cả trừ quản lý trường học (/admin/school-management)
+      return item.path !== "/admin/school-management";
+    }
+
+    if (roleName === "admin" || roleName.includes("admin")) {
+      return adminOnlyPaths.includes(item.path);
+    }
+
+    // Mặc định không hiển thị nếu không xác định role
+    return false;
+  });
+
   const getPageTitle = () => {
     const currentPath = pathname.split("/").pop();
     const navItem = navigation.find(item => item.path.endsWith(currentPath) || (currentPath === "admin" && item.path === "/admin"));
@@ -77,7 +113,7 @@ export default function Navigation() {
           <hr className="text-secondary mt-3" />
           
           <ul className="nav nav-pills flex-column">
-            {navigation.map(item => (
+            {filteredNavigation.map(item => (
               <li key={item.path} className="nav-item text-black fs-5 py-2 py-sm-0">
                 <NavLink
                   to={item.path}

@@ -14,7 +14,7 @@ import DepartmentManagement from "../pages/Admin/DepartmentManagement/Department
 import RoleManagement from "../pages/Admin/RoleManagement/RoleManagement.jsx";
 import BehaviourManagement from "../pages/Admin/BehaviourManagement/BehaviourManagement.jsx";
 import AccountManagement from "../pages/Admin/AccountManagement/AccountManagement.jsx";
-import TimetableManagement from "../pages/Admin/TimetableManagement/TimetableManagement";
+import TimetableManagement from "../pages/Admin/TimetableManagement/TimetableRoute";
 import StudentEvaluationManagement from "../pages/Admin/StudentEvaluationManagement/index";
 import TeachingManagement from "../pages/Admin/TeachingManagement/TeachingManagement";
 import AccountManagementStudent from "../pages/Student/AccountManagement/AccountManagement.jsx";
