@@ -17,6 +17,8 @@ import {
   MenuItem,
   Divider,
   Avatar,
+  Grid,
+  Button,
 } from "@mui/material";
 import TopicIcon from "@mui/icons-material/Topic";
 import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
@@ -24,6 +26,7 @@ import SchoolIcon from "@mui/icons-material/School";
 import MenuBookIcon from "@mui/icons-material/MenuBook";
 import AccountCircleIcon from "@mui/icons-material/AccountCircle";
 import LogoutIcon from "@mui/icons-material/Logout";
+import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import { motion } from "framer-motion";
 import { toast } from "react-toastify";
 import { sIsLoggedIn } from "../../../store.js";
@@ -32,9 +35,19 @@ import { fetchGet, BE_ENPOINT } from "../../lib/httpHandler.js";
 import TopicListStudent from "./TopicListStudent.jsx";
 import TopicDetailStudent from "./TopicDetailStudent.jsx";
 
+import ScheduleIcon from '@mui/icons-material/Schedule';
+import BarChartIcon from '@mui/icons-material/BarChart';
+import NotificationsIcon from '@mui/icons-material/Notifications';
+import PeopleIcon from '@mui/icons-material/People';
+
 const StudentSubjectLearning = ({ onClose }) => {
   const navigate = useNavigate();
   const location = useLocation();
+
+  useEffect(() => {
+    // if route is /student/study, show learning UI immediately
+    if (location && location.pathname === "/student/study") setShowLearning(true);
+  }, [location]);
 
   const [classes, setClasses] = useState([]);
   const [subjects, setSubjects] = useState({});
@@ -53,6 +66,7 @@ const StudentSubjectLearning = ({ onClose }) => {
   });
 
   const [studentId, setStudentId] = useState(null);
+  const [showLearning, setShowLearning] = useState(false); // false = show launcher grid
 
   // Menu avatar
   const [anchorEl, setAnchorEl] = useState(null);
@@ -256,13 +270,15 @@ const StudentSubjectLearning = ({ onClose }) => {
         }}
       >
         <Stack direction={{ xs: "column", md: "row" }} justifyContent="space-between" alignItems="center" spacing={4}>
-          <Box>
-            <Typography variant="h3" fontWeight={900} gutterBottom>
-              Thư viện học tập 🌟
-            </Typography>
-            <Typography variant="h6" sx={{ opacity: 0.9, maxWidth: 600 }}>
-              Khám phá kiến thức theo lớp và môn học một cách thú vị!
-            </Typography>
+          <Box display="flex" alignItems="center" gap={2}>
+            <Box>
+              <Typography variant="h3" fontWeight={900} gutterBottom>
+                Thư viện học tập 🌟
+              </Typography>
+              <Typography variant="h6" sx={{ opacity: 0.9, maxWidth: 600 }}>
+                Khám phá kiến thức theo lớp và môn học một cách thú vị!
+              </Typography>
+            </Box>
           </Box>
 
           <Box textAlign={{ xs: "center", md: "right" }}>
@@ -308,8 +324,53 @@ const StudentSubjectLearning = ({ onClose }) => {
         </Menu>
       </Box>
 
-      {/* Nội dung thư viện học tập */}
-      <Box display="flex" flexDirection={{ xs: "column", md: "row" }} gap={6} px={{ xs: 4, md: 8 }} py={8}>
+      {/* Back bar (under header) */}
+      {showLearning && (
+        <Box px={{ xs: 4, md: 8 }} py={2} sx={{ bgcolor: '#f8fafc' }}>
+          <Button variant="contained" startIcon={<ArrowBackIcon />} onClick={() => { navigate('/student'); setShowLearning(false); }} sx={{ backgroundColor: '#fff', color: '#667eea' }}>
+            Quay lại
+          </Button>
+        </Box>
+      )}
+
+      {/* Nội dung thư viện học tập or launcher */}
+      { !showLearning ? (
+        <Box display="flex" justifyContent="center" alignItems="center" minHeight="60vh" px={{ xs: 4, md: 8 }}>
+          <Grid container spacing={4} sx={{ maxWidth: 1200 }}>
+            {[
+              { key: 'timetable', title: 'Thời khóa biểu', color: '#FFB74D', icon: <ScheduleIcon sx={{ fontSize: 48 }} /> },
+              { key: 'learning', title: 'Học tập', color: '#4FC3F7', icon: <MenuBookIcon sx={{ fontSize: 48 }} /> },
+              { key: 'scores', title: 'Điểm số', color: '#81C784', icon: <BarChartIcon sx={{ fontSize: 48 }} /> },
+              { key: 'notifications', title: 'Thông báo', color: '#9575CD', icon: <NotificationsIcon sx={{ fontSize: 48 }} /> },
+              { key: 'friends', title: 'Bạn bè', color: '#FF8A80', icon: <PeopleIcon sx={{ fontSize: 48 }} /> },
+            ].map((item, i) => (
+              <Grid item xs={12} sm={6} key={item.key}>
+                <Paper
+                  elevation={8}
+                  onClick={() => { if (item.key === 'learning') navigate('/student/study'); }}
+                  sx={{
+                    cursor: 'pointer',
+                    height: 180,
+                    minWidth: 420,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    borderRadius: 3,
+                    background: item.color,
+                    color: '#fff'
+                  }}
+                >
+                  <Stack alignItems="center" spacing={1}>
+                    <Avatar sx={{ bgcolor: 'transparent', width: 64, height: 64 }}>{item.icon}</Avatar>
+                    <Typography variant="h6" fontWeight={700}>{item.title}</Typography>
+                  </Stack>
+                </Paper>
+              </Grid>
+            ))}
+          </Grid>
+        </Box>
+      ) : (
+        <Box display="flex" flexDirection={{ xs: "column", md: "row" }} gap={6} px={{ xs: 4, md: 8 }} py={8}>
         {/* Sidebar chọn lớp */}
         <Box width={{ xs: "100%", md: 380 }}>
           <Paper elevation={12} sx={{ borderRadius: 4, overflow: "hidden", bgcolor: "white", boxShadow: "0 10px 30px rgba(0,0,0,0.08)" }}>
@@ -433,7 +494,8 @@ const StudentSubjectLearning = ({ onClose }) => {
             </Box>
           )}
         </Box>
-      </Box>
+        </Box>
+      )}
     </Box>
   );
 };
