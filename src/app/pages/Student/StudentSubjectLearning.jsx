@@ -42,6 +42,7 @@ import ScheduleIcon from '@mui/icons-material/Schedule';
 import BarChartIcon from '@mui/icons-material/BarChart';
 import NotificationsIcon from '@mui/icons-material/Notifications';
 import PeopleIcon from '@mui/icons-material/People';
+import Friends from './Friends.jsx';
 
 const StudentSubjectLearning = ({ onClose }) => {
   const navigate = useNavigate();
@@ -50,7 +51,7 @@ const StudentSubjectLearning = ({ onClose }) => {
   useEffect(() => {
     // showLearning when on study or timetable pages
     if (location) {
-      if (location.pathname === "/student/study" || location.pathname === "/student/timetable" || location.pathname === "/student/grades" || location.pathname === "/student/notification") setShowLearning(true);
+      if (location.pathname === "/student/study" || location.pathname === "/student/timetable" || location.pathname === "/student/grades" || location.pathname === "/student/notification" || location.pathname === "/student/friends") setShowLearning(true);
       else setShowLearning(false);
     }
   }, [location]);
@@ -359,6 +360,7 @@ const StudentSubjectLearning = ({ onClose }) => {
                     else if (item.key === 'timetable') navigate('/student/timetable');
                     else if (item.key === 'scores') navigate('/student/grades');
                     else if (item.key === 'notifications') navigate('/student/notification');
+                    else if (item.key === 'friends') navigate('/student/friends');
                     else alert(item.title);
                   }}
                   sx={{
@@ -412,7 +414,7 @@ const StudentSubjectLearning = ({ onClose }) => {
               ) : (
                 <Stack spacing={2}>
                   {classes.map((cls) => {
-                    const isSimpleMode = location.pathname === '/student/grades' || location.pathname === '/student/timetable' || location.pathname === '/student/notification';
+                    const isSimpleMode = location.pathname === '/student/grades' || location.pathname === '/student/timetable' || location.pathname === '/student/notification' || location.pathname === '/student/friends';
                     return (
                       <Accordion
                         key={cls.id}
@@ -496,6 +498,8 @@ const StudentSubjectLearning = ({ onClose }) => {
             <Grades classId={expandedClass} studentId={studentId} />
           ) : location.pathname === '/student/notification' ? (
             <NotificationsManagement classIdProp={expandedClass} />
+          ) : location.pathname === '/student/friends' ? (
+            <Friends classId={expandedClass} />
           ) : selectedSubject ? (
             <motion.div initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6 }}>
               <Typography variant="h4" fontWeight={800} mb={5} color="#667eea">
