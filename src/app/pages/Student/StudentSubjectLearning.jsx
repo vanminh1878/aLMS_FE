@@ -34,6 +34,7 @@ import { sIsLoggedIn } from "../../../store.js";
 import { fetchGet, BE_ENPOINT } from "../../lib/httpHandler.js";
 import TopicListStudent from "./TopicListStudent.jsx";
 import TopicDetailStudent from "./TopicDetailStudent.jsx";
+import Timetable from "./Timetable.jsx";
 
 import ScheduleIcon from '@mui/icons-material/Schedule';
 import BarChartIcon from '@mui/icons-material/BarChart';
@@ -45,8 +46,11 @@ const StudentSubjectLearning = ({ onClose }) => {
   const location = useLocation();
 
   useEffect(() => {
-    // if route is /student/study, show learning UI immediately
-    if (location && location.pathname === "/student/study") setShowLearning(true);
+    // showLearning when on study or timetable pages
+    if (location) {
+      if (location.pathname === "/student/study" || location.pathname === "/student/timetable") setShowLearning(true);
+      else setShowLearning(false);
+    }
   }, [location]);
 
   const [classes, setClasses] = useState([]);
@@ -347,7 +351,11 @@ const StudentSubjectLearning = ({ onClose }) => {
               <Grid item xs={12} sm={6} key={item.key}>
                 <Paper
                   elevation={8}
-                  onClick={() => { if (item.key === 'learning') navigate('/student/study'); }}
+                  onClick={() => {
+                    if (item.key === 'learning') navigate('/student/study');
+                    else if (item.key === 'timetable') navigate('/student/timetable');
+                    else alert(item.title);
+                  }}
                   sx={{
                     cursor: 'pointer',
                     height: 180,
@@ -466,7 +474,9 @@ const StudentSubjectLearning = ({ onClose }) => {
 
         {/* Nội dung bên phải */}
         <Box flex={1}>
-          {selectedSubject ? (
+          {location.pathname === '/student/timetable' ? (
+            <Timetable classId={expandedClass} />
+          ) : selectedSubject ? (
             <motion.div initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6 }}>
               <Typography variant="h4" fontWeight={800} mb={5} color="#667eea">
                 <TopicIcon sx={{ fontSize: 48, mr: 2, verticalAlign: "middle" }} />

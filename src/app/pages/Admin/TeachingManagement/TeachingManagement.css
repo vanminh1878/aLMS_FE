@@ -10,3 +10,5 @@
  .tkb-empty-item { display:flex; flex-direction:column; align-items:center; justify-content:center; gap:6px }
  .tkb-cell.not-mine { background:#fff0f0; border-color:#ffd6d6 }
  .tkb-disabled-label { color:#a00; font-weight:600 }
+.tkb-virtual { background: #e8f5e9; border-color: #c8e6c9 }
+.tkb-virtual .tkb-subject { color: #2e7d32 }

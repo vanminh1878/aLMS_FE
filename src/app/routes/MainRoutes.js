@@ -64,6 +64,7 @@ export default function MainRoutes() {
           {/* Trang chủ student */}
           <Route path="/student" element={<StudentPage />} />
           <Route path="/student/study" element={<StudentPage />} />
+          <Route path="/student/timetable" element={<StudentPage />} />
           <Route path="/student/account-management" element={<AccountManagementStudent />} />
           {/* Trang chủ parent */}
           <Route path="/parent" element={<ParentPage />} >
