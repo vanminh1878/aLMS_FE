@@ -49,6 +49,11 @@ export default function NotificationsManagement({ classIdProp }) {
     loadClasses();
   }, []);
 
+  // when parent passes classIdProp (student mode), update internal classId
+  useEffect(() => {
+    if (classIdProp) setClassId(classIdProp);
+  }, [classIdProp]);
+
   useEffect(() => {
     if (classId) loadList();
   }, [classId]);
@@ -126,14 +131,18 @@ export default function NotificationsManagement({ classIdProp }) {
   return (
     <Box className="nm-root">
       <Box sx={{ display: 'flex', gap: 2, mb: 2, alignItems: 'center' }}>
-        <FormControl size="small" sx={{ minWidth: 220 }}>
-          <InputLabel>Chọn lớp</InputLabel>
-          <Select value={classId} label="Chọn lớp" onChange={(e) => setClassId(e.target.value)}>
-            <MenuItem value="">-- Chọn lớp --</MenuItem>
-            {classOptions.map(c => <MenuItem key={c.id} value={c.id}>{c.name}</MenuItem>)}
-          </Select>
-        </FormControl>
-        <Button variant="contained" onClick={openCreate}>Tạo thông báo</Button>
+        {!classIdProp && (
+          <>
+            <FormControl size="small" sx={{ minWidth: 220 }}>
+              <InputLabel>Chọn lớp</InputLabel>
+              <Select value={classId} label="Chọn lớp" onChange={(e) => setClassId(e.target.value)}>
+                <MenuItem value="">-- Chọn lớp --</MenuItem>
+                {classOptions.map(c => <MenuItem key={c.id} value={c.id}>{c.name}</MenuItem>)}
+              </Select>
+            </FormControl>
+            <Button variant="contained" onClick={openCreate}>Tạo thông báo</Button>
+          </>
+        )}
       </Box>
 
       <List>
@@ -159,10 +168,12 @@ export default function NotificationsManagement({ classIdProp }) {
                   </Box>
                 </Box>
 
-                <Box sx={{ display: 'flex', gap: 1, mt: 1 }}>
-                  <Button size="small" onClick={() => openEdit(n)}>Sửa</Button>
-                  <Button size="small" color="error" onClick={() => remove(n.id)}>Xóa</Button>
-                </Box>
+                {!classIdProp && (
+                  <Box sx={{ display: 'flex', gap: 1, mt: 1 }}>
+                    <Button size="small" onClick={() => openEdit(n)}>Sửa</Button>
+                    <Button size="small" color="error" onClick={() => remove(n.id)}>Xóa</Button>
+                  </Box>
+                )}
               </Box>
             </ListItem>
           );

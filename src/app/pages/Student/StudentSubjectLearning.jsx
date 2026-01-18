@@ -36,6 +36,7 @@ import TopicListStudent from "./TopicListStudent.jsx";
 import TopicDetailStudent from "./TopicDetailStudent.jsx";
 import Timetable from "./Timetable.jsx";
 import Grades from "./Grades.jsx";
+import NotificationsManagement from "../Admin/StudentEvaluationManagement/NotificationsManagement.jsx";
 
 import ScheduleIcon from '@mui/icons-material/Schedule';
 import BarChartIcon from '@mui/icons-material/BarChart';
@@ -49,7 +50,7 @@ const StudentSubjectLearning = ({ onClose }) => {
   useEffect(() => {
     // showLearning when on study or timetable pages
     if (location) {
-      if (location.pathname === "/student/study" || location.pathname === "/student/timetable" || location.pathname === "/student/grades") setShowLearning(true);
+      if (location.pathname === "/student/study" || location.pathname === "/student/timetable" || location.pathname === "/student/grades" || location.pathname === "/student/notification") setShowLearning(true);
       else setShowLearning(false);
     }
   }, [location]);
@@ -226,8 +227,8 @@ const StudentSubjectLearning = ({ onClose }) => {
     setExpandedClass(newExpanded);
     setSelectedSubject(null);
     setSelectedTopic(null);
-    // do not auto-load subject list when viewing grades
-    if (newExpanded && location.pathname !== '/student/grades' && location.pathname !== '/student/timetable') fetchSubjectsByClass(classId);
+    // do not auto-load subject list when viewing grades / timetable / notification
+    if (newExpanded && location.pathname !== '/student/grades' && location.pathname !== '/student/timetable' && location.pathname !== '/student/notification') fetchSubjectsByClass(classId);
   };
 
   const handleSelectSubject = (subject) => {
@@ -357,6 +358,7 @@ const StudentSubjectLearning = ({ onClose }) => {
                     if (item.key === 'learning') navigate('/student/study');
                     else if (item.key === 'timetable') navigate('/student/timetable');
                     else if (item.key === 'scores') navigate('/student/grades');
+                    else if (item.key === 'notifications') navigate('/student/notification');
                     else alert(item.title);
                   }}
                   sx={{
@@ -410,7 +412,7 @@ const StudentSubjectLearning = ({ onClose }) => {
               ) : (
                 <Stack spacing={2}>
                   {classes.map((cls) => {
-                    const isSimpleMode = location.pathname === '/student/grades' || location.pathname === '/student/timetable';
+                    const isSimpleMode = location.pathname === '/student/grades' || location.pathname === '/student/timetable' || location.pathname === '/student/notification';
                     return (
                       <Accordion
                         key={cls.id}
@@ -437,7 +439,7 @@ const StudentSubjectLearning = ({ onClose }) => {
                         <AccordionDetails sx={{ pt: 2 }}>
                           {isSimpleMode ? (
                             <Box px={1} py={2}>
-                              <Typography variant="body1" color="text.secondary">Danh sách môn đã ẩn trong chế độ Điểm.</Typography>
+                              <Typography variant="body1" color="text.secondary">Danh sách môn đã ẩn trong chế độ này.</Typography>
                             </Box>
                           ) : (
                             (loadingSubjects && expandedClass === cls.id) ? (
@@ -492,6 +494,8 @@ const StudentSubjectLearning = ({ onClose }) => {
             <Timetable classId={expandedClass} />
           ) : location.pathname === '/student/grades' ? (
             <Grades classId={expandedClass} studentId={studentId} />
+          ) : location.pathname === '/student/notification' ? (
+            <NotificationsManagement classIdProp={expandedClass} />
           ) : selectedSubject ? (
             <motion.div initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6 }}>
               <Typography variant="h4" fontWeight={800} mb={5} color="#667eea">
