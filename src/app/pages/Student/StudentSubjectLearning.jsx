@@ -35,6 +35,7 @@ import { fetchGet, BE_ENPOINT } from "../../lib/httpHandler.js";
 import TopicListStudent from "./TopicListStudent.jsx";
 import TopicDetailStudent from "./TopicDetailStudent.jsx";
 import Timetable from "./Timetable.jsx";
+import Grades from "./Grades.jsx";
 
 import ScheduleIcon from '@mui/icons-material/Schedule';
 import BarChartIcon from '@mui/icons-material/BarChart';
@@ -48,7 +49,7 @@ const StudentSubjectLearning = ({ onClose }) => {
   useEffect(() => {
     // showLearning when on study or timetable pages
     if (location) {
-      if (location.pathname === "/student/study" || location.pathname === "/student/timetable") setShowLearning(true);
+      if (location.pathname === "/student/study" || location.pathname === "/student/timetable" || location.pathname === "/student/grades") setShowLearning(true);
       else setShowLearning(false);
     }
   }, [location]);
@@ -225,7 +226,8 @@ const StudentSubjectLearning = ({ onClose }) => {
     setExpandedClass(newExpanded);
     setSelectedSubject(null);
     setSelectedTopic(null);
-    if (newExpanded) fetchSubjectsByClass(classId);
+    // do not auto-load subject list when viewing grades
+    if (newExpanded && location.pathname !== '/student/grades' && location.pathname !== '/student/timetable') fetchSubjectsByClass(classId);
   };
 
   const handleSelectSubject = (subject) => {
@@ -341,7 +343,7 @@ const StudentSubjectLearning = ({ onClose }) => {
       { !showLearning ? (
         <Box display="flex" justifyContent="center" alignItems="center" minHeight="60vh" px={{ xs: 4, md: 8 }}>
           <Grid container spacing={4} sx={{ maxWidth: 1200 }}>
-            {[
+              {[
               { key: 'timetable', title: 'Thời khóa biểu', color: '#FFB74D', icon: <ScheduleIcon sx={{ fontSize: 48 }} /> },
               { key: 'learning', title: 'Học tập', color: '#4FC3F7', icon: <MenuBookIcon sx={{ fontSize: 48 }} /> },
               { key: 'scores', title: 'Điểm số', color: '#81C784', icon: <BarChartIcon sx={{ fontSize: 48 }} /> },
@@ -354,6 +356,7 @@ const StudentSubjectLearning = ({ onClose }) => {
                   onClick={() => {
                     if (item.key === 'learning') navigate('/student/study');
                     else if (item.key === 'timetable') navigate('/student/timetable');
+                    else if (item.key === 'scores') navigate('/student/grades');
                     else alert(item.title);
                   }}
                   sx={{
@@ -406,66 +409,77 @@ const StudentSubjectLearning = ({ onClose }) => {
                 </Box>
               ) : (
                 <Stack spacing={2}>
-                  {classes.map((cls) => (
-                    <Accordion
-                      key={cls.id}
-                      expanded={expandedClass === cls.id}
-                      onChange={() => handleClassChange(cls.id)}
-                      sx={{ borderRadius: 3, boxShadow: "0 4px 15px rgba(0,0,0,0.06)", "&:before": { display: "none" } }}
-                    >
-                      <AccordionSummary
-                        expandIcon={<ExpandMoreIcon />}
-                        sx={{
-                          borderRadius: 3,
-                          bgcolor: expandedClass === cls.id ? "#667eea15" : "white",
-                          border: expandedClass === cls.id ? "2px solid #667eea" : "1px solid #eee",
-                          minHeight: 72,
-                          "& .MuiAccordionSummary-content": { my: 2 },
-                        }}
+                  {classes.map((cls) => {
+                    const isSimpleMode = location.pathname === '/student/grades' || location.pathname === '/student/timetable';
+                    return (
+                      <Accordion
+                        key={cls.id}
+                        expanded={!isSimpleMode && expandedClass === cls.id}
+                        onChange={!isSimpleMode ? () => handleClassChange(cls.id) : undefined}
+                        sx={{ borderRadius: 3, boxShadow: "0 4px 15px rgba(0,0,0,0.06)", "&:before": { display: "none" } }}
                       >
-                        <Typography variant="h6" fontWeight={700} color={expandedClass === cls.id ? "#667eea" : "inherit"}>
-                          {cls.className} ({cls.grade} - {cls.schoolYear})
-                        </Typography>
-                      </AccordionSummary>
-                      <AccordionDetails sx={{ pt: 2 }}>
-                        {loadingSubjects && expandedClass === cls.id ? (
-                          <LinearProgress sx={{ borderRadius: 2 }} />
-                        ) : (
-                          <Stack spacing={1.5}>
-                            {(subjects[cls.id] || []).map((subject) => (
-                              <motion.div key={subject.id} whileHover={{ x: 10 }} whileTap={{ scale: 0.98 }}>
-                                <Box
-                                  onClick={() => handleSelectSubject(subject)}
-                                  sx={{
-                                    cursor: "pointer",
-                                    p: 2,
-                                    borderRadius: 2,
-                                    bgcolor: selectedSubject?.id === subject.id ? "#667eea20" : "transparent",
-                                    borderLeft: "5px solid #667eea",
-                                    transition: "all 0.3s ease",
-                                    "&:hover": { bgcolor: "#f0f4ff" },
-                                  }}
-                                >
-                                  <Typography
-                                    variant="subtitle1"
-                                    fontWeight={600}
-                                    color={selectedSubject?.id === subject.id ? "#667eea" : "text.primary"}
-                                  >
-                                    {subject.name}
+                        <AccordionSummary
+                          expandIcon={!isSimpleMode ? <ExpandMoreIcon /> : null}
+                          onClick={isSimpleMode ? () => setExpandedClass(cls.id) : undefined}
+                          sx={{
+                            borderRadius: 3,
+                            bgcolor: expandedClass === cls.id ? "#667eea15" : "white",
+                            border: expandedClass === cls.id ? "2px solid #667eea" : "1px solid #eee",
+                            minHeight: 72,
+                            "& .MuiAccordionSummary-content": { my: 2 },
+                          }}
+                        >
+                          <Typography variant="h6" fontWeight={700} color={expandedClass === cls.id ? "#667eea" : "inherit"}>
+                            {cls.className} ({cls.grade} - {cls.schoolYear})
+                          </Typography>
+                        </AccordionSummary>
+
+                        <AccordionDetails sx={{ pt: 2 }}>
+                          {isSimpleMode ? (
+                            <Box px={1} py={2}>
+                              <Typography variant="body1" color="text.secondary">Danh sách môn đã ẩn trong chế độ Điểm.</Typography>
+                            </Box>
+                          ) : (
+                            (loadingSubjects && expandedClass === cls.id) ? (
+                              <LinearProgress sx={{ borderRadius: 2 }} />
+                            ) : (
+                              <Stack spacing={1.5}>
+                                {(subjects[cls.id] || []).map((subject) => (
+                                  <motion.div key={subject.id} whileHover={{ x: 10 }} whileTap={{ scale: 0.98 }}>
+                                    <Box
+                                      onClick={() => handleSelectSubject(subject)}
+                                      sx={{
+                                        cursor: "pointer",
+                                        p: 2,
+                                        borderRadius: 2,
+                                        bgcolor: selectedSubject?.id === subject.id ? "#667eea20" : "transparent",
+                                        borderLeft: "5px solid #667eea",
+                                        transition: "all 0.3s ease",
+                                        "&:hover": { bgcolor: "#f0f4ff" },
+                                      }}
+                                    >
+                                      <Typography
+                                        variant="subtitle1"
+                                        fontWeight={600}
+                                        color={selectedSubject?.id === subject.id ? "#667eea" : "text.primary"}
+                                      >
+                                        {subject.name}
+                                      </Typography>
+                                    </Box>
+                                  </motion.div>
+                                ))}
+                                {(subjects[cls.id] || []).length === 0 && !loadingSubjects && (
+                                  <Typography color="text.secondary" textAlign="center" py={3}>
+                                    Lớp này chưa có môn học
                                   </Typography>
-                                </Box>
-                              </motion.div>
-                            ))}
-                            {(subjects[cls.id] || []).length === 0 && !loadingSubjects && (
-                              <Typography color="text.secondary" textAlign="center" py={3}>
-                                Lớp này chưa có môn học
-                              </Typography>
-                            )}
-                          </Stack>
-                        )}
-                      </AccordionDetails>
-                    </Accordion>
-                  ))}
+                                )}
+                              </Stack>
+                            )
+                          )}
+                        </AccordionDetails>
+                      </Accordion>
+                    );
+                  })}
                 </Stack>
               )}
             </Box>
@@ -476,6 +490,8 @@ const StudentSubjectLearning = ({ onClose }) => {
         <Box flex={1}>
           {location.pathname === '/student/timetable' ? (
             <Timetable classId={expandedClass} />
+          ) : location.pathname === '/student/grades' ? (
+            <Grades classId={expandedClass} studentId={studentId} />
           ) : selectedSubject ? (
             <motion.div initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6 }}>
               <Typography variant="h4" fontWeight={800} mb={5} color="#667eea">
