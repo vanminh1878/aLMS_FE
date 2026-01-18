@@ -30,11 +30,11 @@ import { toast } from "react-toastify";
 import { sIsLoggedIn } from "../../../store.js";
 
 import { fetchGet } from "../../lib/httpHandler.js";
-import { FormControl, InputLabel, Select } from '@mui/material';
 import AddBehaviourForm from "./BehaviourManagement/AddBehaviourForm"; // Dialog gốc
 import DetailBehaviourTable from "./BehaviourManagement/DetailBehaviourTable";
 import Timetable from "../Student/Timetable";
 import NotificationsManagement from "../Admin/StudentEvaluationManagement/NotificationsManagement.jsx";
+import ParentNotebook from './ParentNotebook';
 
 const ParentDashboard = ({ onClose }) => {
   const navigate = useNavigate();
@@ -372,54 +372,20 @@ const ParentDashboard = ({ onClose }) => {
             </>
           ) : isTimetablePage ? (
             <Paper elevation={0} sx={{ p: 0 }}>
-              <Box px={{ xs: 4, md: 8 }} py={2} sx={{ bgcolor: '#f8fafc' }}>
-                <Stack direction={{ xs: 'column', md: 'row' }} spacing={2} alignItems="center" justifyContent="space-between">
-                  <Box>
-                    <Typography variant="h6" fontWeight={700}>Chọn lớp</Typography>
-                  </Box>
-                  <Box>
-                    <FormControl size="small" sx={{ minWidth: 220 }}>
-                      <InputLabel>Chọn lớp</InputLabel>
-                      <Select value={selectedClassId} label="Chọn lớp" onChange={(e) => setSelectedClassId(e.target.value)}>
-                        {parentClasses.map(c => <MenuItem key={c.id || c.classId} value={c.id || c.classId}>{c.className || c.name}</MenuItem>)}
-                      </Select>
-                    </FormControl>
-                  </Box>
-                </Stack>
-              </Box>
+              {/* class selector hidden for parent — auto-uses first class */}
               <Timetable classId={selectedClassId || child.classId} />
             </Paper>
           ) : isNotebookPage ? (
             <Paper elevation={0} sx={{ p: 0 }}>
-              <Box px={{ xs: 4, md: 8 }} py={2} sx={{ bgcolor: '#f8fafc' }}>
-                <FormControl size="small" sx={{ minWidth: 220 }}>
-                  <InputLabel>Chọn lớp</InputLabel>
-                      <Select value={selectedClassId} label="Chọn lớp" onChange={(e) => setSelectedClassId(e.target.value)}>
-                        {parentClasses.map(c => <MenuItem key={c.id || c.classId} value={c.id || c.classId}>{c.className || c.name}</MenuItem>)}
-                      </Select>
-                </FormControl>
-              </Box>
-              <NotificationsManagement classIdProp={selectedClassId || child.classId} />
+              {/* class selector hidden for parent — auto-uses first class */}
+              <ParentNotebook classId={selectedClassId || child.classId} studentId={child.id} studentName={child.name} />
             </Paper>
           ) : isNotificationPage ? (
             <Paper elevation={0} sx={{ p: 0 }}>
-              <Box px={{ xs: 2, md: 6 }} py={2} sx={{ bgcolor: '#f8fafc' }}>
-                <Box display="flex" gap={2} flexDirection={{ xs: 'column', md: 'row' }}>
-                  <Box sx={{ width: { xs: '100%', md: 300 } }}>
-                    <FormControl fullWidth size="small">
-                      <InputLabel>Chọn lớp</InputLabel>
-                      <Select value={selectedClassId} label="Chọn lớp" onChange={(e) => setSelectedClassId(e.target.value)}>
-                        {parentClasses.map(c => <MenuItem key={c.id || c.classId} value={c.id || c.classId}>{c.className || c.name}</MenuItem>)}
-                      </Select>
-                    </FormControl>
-                  </Box>
-
-                  <Box sx={{ flex: 1 }}>
-                    <NotificationsManagement classIdProp={selectedClassId || child.classId} />
-                  </Box>
+                <Box px={{ xs: 2, md: 6 }} py={2} sx={{ bgcolor: '#ffffff' }}>
+                  <NotificationsManagement classIdProp={selectedClassId || child.classId} />
                 </Box>
-              </Box>
-            </Paper>
+              </Paper>
           ) : (
             <Paper elevation={6} sx={{ maxWidth: 900, mx: 'auto', p: 4, borderRadius: 3, textAlign: 'center' }}>
               <Typography variant="h4" fontWeight={800} gutterBottom>
