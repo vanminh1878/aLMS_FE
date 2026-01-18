@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { createEvaluation, updateEvaluation, postQualityEvaluation, postSubjectComment } from "../../../lib/studentEvaluationService";
+import { createEvaluation, updateEvaluation, postQualityEvaluation, postSubjectComment, getByStudent } from "../../../lib/studentEvaluationService";
 import { fetchGet } from "../../../lib/httpHandler";
 import { getByClass as getFinalRecordsByClass } from "../../../lib/finalTermRecordService";
 import { Snackbar, Alert } from "@mui/material";
@@ -9,6 +9,16 @@ const defaultYear = "2025-2026";
 
 const qualityKeys = ["Yêu nước", "Nhân ái", "Chăm chỉ", "Trung thực", "Trách nhiệm"];
 const subjectMetrics = ["KT CK", "XL CK"];
+// mapping quality names to ids and reverse map for loading from API
+const qualityIdMap = {
+  "Yêu nước": "2de3dda7-1db5-4f28-8a36-adf21be860de",
+  "Nhân ái": "165688a0-5cd3-403a-8e06-52fc2d80ba17",
+  "Chăm chỉ": "6d89b1f7-b54a-481d-bb43-491c565e4024",
+  "Trung thực": "ba5ba78d-e7da-4b01-a86b-2177d48dcd21",
+  "Trách nhiệm": "d1b97e59-03e5-4810-adc5-49b56be6a251",
+  "Đánh giá": "51534d2b-6965-4954-96d3-7cc480cb99c2",
+};
+const qualityIdToName = Object.keys(qualityIdMap).reduce((acc, name) => { acc[qualityIdMap[name]] = name; return acc; }, {});
 
 const HomeroomTab = () => {
   const [toastOpen, setToastOpen] = useState(false);
@@ -74,6 +84,53 @@ const HomeroomTab = () => {
             }
           } catch (e) {
             console.warn('HomeroomTab: Không tải được final-term-records cho lớp:', e);
+          }
+
+          // For each student, try to load existing student-evaluations for the selected semester/year
+          try {
+            const evalPromises = mapped.map((stu) => new Promise((res, rej) => {
+              getByStudent(stu.studentId, semester, schoolYear, (data) => res({ student: stu, data }), (err) => res({ student: stu, data: null }), (ex) => res({ student: stu, data: null }));
+            }));
+
+            const evalResults = await Promise.all(evalPromises);
+            for (const r of evalResults) {
+              const stu = r.student;
+              const evArr = Array.isArray(r.data) ? r.data : [];
+              if (evArr.length > 0) {
+                const ev = evArr[0]; // assume first is relevant
+                stu.evaluationId = ev.id || ev.evaluationId || null;
+                stu.finalScore = ev.finalScore;
+                stu.finalEvaluation = ev.finalEvaluation || "";
+                // bind homeroom UI fields to API fields
+                stu.homeroomEvaluation = ev.finalEvaluation || "";
+                stu.generalComment = ev.generalComment || "";
+                stu.homeroomNote = ev.generalComment || "";
+                // bind subject comments
+                if (Array.isArray(ev.subjectComments)) {
+                  for (const sc of ev.subjectComments) {
+                    stu.subjectScores = stu.subjectScores || {};
+                    if (!stu.subjectScores[sc.subjectId]) stu.subjectScores[sc.subjectId] = {};
+                    stu.subjectScores[sc.subjectId].comment = sc.comment;
+                  }
+                }
+                // bind quality evaluations
+                    if (Array.isArray(ev.qualityEvaluations)) {
+                      stu.qualities = stu.qualities || {};
+                      for (const q of ev.qualityEvaluations) {
+                        // API may return only qualityId (qualityName can be null)
+                        const qName = (q.qualityId && qualityIdToName[q.qualityId]) || q.qualityName;
+                        if (qName) {
+                          // prefer non-empty levels when duplicates exist
+                          const existing = stu.qualities[qName];
+                          if (!existing || existing === "") stu.qualities[qName] = q.qualityLevel || "";
+                          else if (q.qualityLevel && q.qualityLevel !== "") stu.qualities[qName] = q.qualityLevel;
+                        }
+                      }
+                    }
+              }
+            }
+          } catch (e) {
+            console.warn('HomeroomTab: Không tải được student evaluations:', e);
           }
 
           setStudents(mapped);
@@ -157,15 +214,7 @@ const HomeroomTab = () => {
   const handleBulkSave = async () => {
     if (!classId) return showToast("Vui lòng chọn Lớp trước khi lưu.", "warning");
 
-    // mapping of quality names to ids (provided)
-    const qualityIdMap = {
-      "Yêu nước": "2de3dda7-1db5-4f28-8a36-adf21be860de",
-      "Nhân ái": "165688a0-5cd3-403a-8e06-52fc2d80ba17",
-      "Chăm chỉ": "6d89b1f7-b54a-481d-bb43-491c565e4024",
-      "Trung thực": "ba5ba78d-e7da-4b01-a86b-2177d48dcd21",
-      "Trách nhiệm": "d1b97e59-03e5-4810-adc5-49b56be6a251",
-      "Đánh giá": "51534d2b-6965-4954-96d3-7cc480cb99c2",
-    };
+    // use module-level qualityIdMap
 
     const accountId = localStorage.getItem("accountId") || localStorage.getItem("userId") || null;
     const createdBy = currentUserId || accountId || null;
@@ -180,22 +229,25 @@ const HomeroomTab = () => {
         schoolYear,
         finalScore: Number(s.finalScore) || 0,
         level: s.level || "",
-        generalComment: s.generalComment || "",
-        finalEvaluation: s.finalEvaluation || "",
+        // map UI homeroom fields to API contract
+        generalComment: s.homeroomNote || s.generalComment || "",
+        finalEvaluation: s.homeroomEvaluation || s.finalEvaluation || "",
       };
 
       // attach CreatedBy when available (use currentUserId fetched from account endpoint)
       if (createdBy) payload.CreatedBy = createdBy;
 
       const evalPromise = new Promise((resolve, reject) => {
-        // if we have an existing evaluation id, update instead of create
+        // log intent
         if (s.evaluationId) {
+          console.log('HomeroomTab: updating evaluation', { evaluationId: s.evaluationId, payload });
           updateEvaluation(s.evaluationId, payload,
             (updated) => resolve(updated),
             (err) => { console.error('updateEvaluation failed', err); resolve(null); },
             (ex) => { console.error('updateEvaluation exception', ex); resolve(null); }
           );
         } else {
+          console.log('HomeroomTab: creating evaluation', { payload });
           createEvaluation(payload,
             (created) => resolve(created),
             (err) => { console.error('createEvaluation failed', err); resolve(null); },
@@ -205,38 +257,48 @@ const HomeroomTab = () => {
       });
 
       const chain = evalPromise.then((created) => {
-        const evaluationId = (created && (created.id || created.evaluationId)) || null;
+        const evaluationId = s.evaluationId || (created && (created.id || created.evaluationId)) || null;
         if (evaluationId) {
           // persist evaluationId on the student object for future updates
           s.evaluationId = evaluationId;
           try { setStudents([...students]); } catch (e) { /* ignore */ }
         }
         const subPromises = [];
-        // post subject comments for this evaluation
-        if (evaluationId && s.subjectScores) {
-          for (const subjectId of Object.keys(s.subjectScores)) {
-            const sc = s.subjectScores[subjectId];
-            const comment = sc && sc.comment;
-            if (comment !== undefined && comment !== null) {
-              const body = { studentEvaluationId: evaluationId, subjectId, comment };
-              if (createdBy) body.CreatedBy = createdBy;
-              subPromises.push(new Promise((res, rej) => {
-                postSubjectComment(evaluationId, body, (r) => res(r), (err) => { console.error('postSubjectComment fail', err); res(null); }, (ex) => { console.error('postSubjectComment ex', ex); res(null); });
-              }));
-            }
+        // post subject comments for this evaluation — always send for each subject (allow empty comment)
+        if (evaluationId) {
+          const subjectIds = (subjectsForClass && subjectsForClass.length)
+            ? subjectsForClass.map(su => su.subjectId)
+            : (s.subjectScores ? Object.keys(s.subjectScores) : []);
+          for (const subjectId of subjectIds) {
+            const comment = (s.subjectScores && s.subjectScores[subjectId] && (s.subjectScores[subjectId].comment !== undefined && s.subjectScores[subjectId].comment !== null) ? s.subjectScores[subjectId].comment : "");
+            const body = { studentEvaluationId: evaluationId, subjectId, comment };
+            if (createdBy) body.CreatedBy = createdBy;
+            subPromises.push(new Promise((res, rej) => {
+              console.log('HomeroomTab: POST subject-comment', { evaluationId, studentEvaluationId: evaluationId, subjectId, comment, CreatedBy: createdBy });
+              postSubjectComment(evaluationId, body,
+                (r) => { console.log('HomeroomTab: postSubjectComment success', { evaluationId, subjectId, response: r }); res(r); },
+                (err) => { console.error('HomeroomTab: postSubjectComment fail', { evaluationId, subjectId, err }); res(null); },
+                (ex) => { console.error('HomeroomTab: postSubjectComment ex', { evaluationId, subjectId, ex }); res(null); }
+              );
+            }));
           }
         }
 
-        // post quality evaluations
-        if (evaluationId && s.qualities) {
-          for (const qName of Object.keys(s.qualities)) {
-            const qLevel = s.qualities[qName];
+        // post quality evaluations — always send for each quality key (allow empty level)
+        if (evaluationId) {
+          for (const qName of qualityKeys) {
+            const qLevel = (s.qualities && s.qualities[qName]) || "";
             const qId = qualityIdMap[qName];
             if (qId) {
               const qBody = { studentEvaluationId: evaluationId, qualityId: qId, qualityLevel: qLevel };
               if (createdBy) qBody.CreatedBy = createdBy;
               subPromises.push(new Promise((res, rej) => {
-                postQualityEvaluation(evaluationId, qBody, (r) => res(r), (err) => { console.error('postQualityEvaluation fail', err); res(null); }, (ex) => { console.error('postQualityEvaluation ex', ex); res(null); });
+                console.log('HomeroomTab: POST quality-evaluation', { evaluationId, studentEvaluationId: evaluationId, qualityId: qId, qualityLevel: qLevel, CreatedBy: createdBy });
+                postQualityEvaluation(evaluationId, qBody,
+                  (r) => { console.log('HomeroomTab: postQualityEvaluation success', { evaluationId, qualityId: qId, response: r }); res(r); },
+                  (err) => { console.error('HomeroomTab: postQualityEvaluation fail', { evaluationId, qualityId: qId, err }); res(null); },
+                  (ex) => { console.error('HomeroomTab: postQualityEvaluation ex', { evaluationId, qualityId: qId, ex }); res(null); }
+                );
               }));
             }
           }

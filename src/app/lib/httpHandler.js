@@ -159,11 +159,26 @@ const fetchPut = async (uri, reqData, onSuccess, onFail, onException) => {
       return onSuccess({ message: "Cập nhật thành công" });
     }
 
-    const data = await res.json();
-    if (!res.ok) {
-      return onFail({ title: data.title, status: res.status });
+    let data = null;
+    try {
+      // try to parse JSON if present
+      const ct = res.headers.get('content-type') || '';
+      if (ct.includes('application/json')) {
+        data = await res.json();
+      } else {
+        // no JSON body
+        data = null;
+      }
+    } catch (e) {
+      // empty body or invalid JSON
+      data = null;
     }
-    return onSuccess(data);
+
+    if (!res.ok) {
+      return onFail({ title: (data && data.title) || 'Lỗi server', status: res.status });
+    }
+    // if no body, return an empty object so callers can continue
+    return onSuccess(data || {});
   } catch (error) {
     console.error("Fetch PUT error:", error.message);
     if (typeof onException === "function") {
