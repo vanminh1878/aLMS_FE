@@ -18,7 +18,7 @@ import {
 } from "@mui/material";
 import ScheduleIcon from '@mui/icons-material/Schedule';
 import MenuBookIcon from '@mui/icons-material/MenuBook';
-import GavelIcon from '@mui/icons-material/Gavel';
+import VideocamIcon from '@mui/icons-material/Videocam';
 import NotificationsIcon from '@mui/icons-material/Notifications';
 import AccountCircleIcon from "@mui/icons-material/AccountCircle";
 import LogoutIcon from "@mui/icons-material/Logout";
@@ -410,7 +410,7 @@ const ParentDashboard = ({ onClose }) => {
 
                 <Grid item xs={12} sm={6} md={4} sx={{ display: 'flex' }}>
                   <Paper onClick={() => navigate('/parent/behaviour')} elevation={3} sx={{ p: 3, width: '100%', cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1 }}>
-                    <GavelIcon sx={{ fontSize: 48, color: '#e53e3e' }} />
+                    <VideocamIcon sx={{ fontSize: 48, color: '#e53e3e' }} />
                     <Typography fontWeight={700}>Hành vi</Typography>
                   </Paper>
                 </Grid>
