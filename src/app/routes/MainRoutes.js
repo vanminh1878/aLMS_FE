@@ -70,9 +70,12 @@ export default function MainRoutes() {
           <Route path="/student/friends" element={<StudentPage />} />
           <Route path="/student/account-management" element={<AccountManagementStudent />} />
           {/* Trang chủ parent */}
-          <Route path="/parent" element={<ParentPage />} >
-           <Route path="/parent/account-management" element={<AccountManagementParent />} />
-          </Route>
+          <Route path="/parent" element={<ParentPage />} />
+          <Route path="/parent/timetable" element={<ParentPage />} />
+          <Route path="/parent/notebook" element={<ParentPage />} />
+          <Route path="/parent/notification" element={<ParentPage />} />
+          <Route path="/parent/behaviour" element={<ParentPage />} />
+          <Route path="/parent/account-management" element={<AccountManagementParent />} />
         </Route>
 
         {/* ==================== ERROR PAGES ==================== */}

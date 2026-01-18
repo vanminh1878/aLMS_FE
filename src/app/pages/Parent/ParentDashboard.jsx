@@ -16,6 +16,10 @@ import {
   Container,
   Button,
 } from "@mui/material";
+import ScheduleIcon from '@mui/icons-material/Schedule';
+import MenuBookIcon from '@mui/icons-material/MenuBook';
+import GavelIcon from '@mui/icons-material/Gavel';
+import NotificationsIcon from '@mui/icons-material/Notifications';
 import AccountCircleIcon from "@mui/icons-material/AccountCircle";
 import LogoutIcon from "@mui/icons-material/Logout";
 import ChildCareIcon from "@mui/icons-material/ChildCare";
@@ -26,8 +30,11 @@ import { toast } from "react-toastify";
 import { sIsLoggedIn } from "../../../store.js";
 
 import { fetchGet } from "../../lib/httpHandler.js";
+import { FormControl, InputLabel, Select } from '@mui/material';
 import AddBehaviourForm from "./BehaviourManagement/AddBehaviourForm"; // Dialog gốc
 import DetailBehaviourTable from "./BehaviourManagement/DetailBehaviourTable";
+import Timetable from "../Student/Timetable";
+import NotificationsManagement from "../Admin/StudentEvaluationManagement/NotificationsManagement.jsx";
 
 const ParentDashboard = ({ onClose }) => {
   const navigate = useNavigate();
@@ -38,6 +45,9 @@ const ParentDashboard = ({ onClose }) => {
   const [loadingUser, setLoadingUser] = useState(true);
   const [loadingChild, setLoadingChild] = useState(false);
   const [behaviourReloadKey, setBehaviourReloadKey] = useState(0);
+  const [parentClasses, setParentClasses] = useState([]);
+  const [selectedClassId, setSelectedClassId] = useState("");
+  const [loadingParentClasses, setLoadingParentClasses] = useState(false);
 
   // State mở form thêm hành vi (Dialog)
   const [openAddForm, setOpenAddForm] = useState(false);
@@ -129,7 +139,7 @@ const ParentDashboard = ({ onClose }) => {
         accountRes = await new Promise((r) => fetchGet(`/api/accounts/${userRes.accountId}`, r, () => {}, () => {}));
       }
 
-      setChild({
+      const childObj = {
         id: studentId,
         name: userRes.name || "Chưa có tên",
         dateOfBirth: userRes.dateOfBirth ? new Date(userRes.dateOfBirth).toLocaleDateString("vi-VN") : "—",
@@ -137,7 +147,11 @@ const ParentDashboard = ({ onClose }) => {
         grade: profile.grade || "?",
         schoolYear: profile.schoolYear || "?",
         behaviours: profile.behaviours || [],
-      });
+      };
+      // try to capture classId if provided in profile
+      childObj.classId = profile.classId || (profile.class && (profile.class.id || profile.class.classId)) || "";
+
+      setChild(childObj);
     } catch (err) {
       console.error("Lỗi tải thông tin con em:", err);
       toast.error("Không thể tải thông tin con em");
@@ -151,7 +165,28 @@ const ParentDashboard = ({ onClose }) => {
     loadChildDetails();
   }, [parentInfo.id]);
 
+  // load classes for the child so parent can select if needed
+  useEffect(() => {
+    if (!child?.id) return;
+    setLoadingParentClasses(true);
+    fetchGet(`/api/classes/by-student/${child.id}`,
+      (data) => {
+        const arr = Array.isArray(data) ? data : (data ? [data] : []);
+        setParentClasses(arr);
+        // prefer child's classId if present
+        const defaultId = child.classId || (arr[0] && (arr[0].id || arr[0].classId)) || "";
+        setSelectedClassId(defaultId);
+      },
+      (err) => { console.error('parent classes load err', err); setParentClasses([]); }
+    );
+    setLoadingParentClasses(false);
+  }, [child]);
+
   const isAccountManagementPage = location.pathname === "/parent/account-management";
+  const isBehaviourPage = location.pathname === "/parent/behaviour";
+  const isTimetablePage = location.pathname === "/parent/timetable";
+  const isNotebookPage = location.pathname === "/parent/notebook";
+  const isNotificationPage = location.pathname === "/parent/notification";
   if (isAccountManagementPage) return <Outlet />;
 
   if (loadingUser || loadingChild) {
@@ -289,92 +324,140 @@ const ParentDashboard = ({ onClose }) => {
 
       <Container maxWidth="lg" sx={{ py: 6 }}>
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
-          {/* Thông tin học sinh - nhỏ gọn, chính giữa */}
-          <Paper
-            elevation={6}
-            sx={{
-              maxWidth: 600,
-              mx: "auto",
-              p: { xs: 3, md: 4 },
-              borderRadius: 3,
-              textAlign: "center",
-              mb: 6,
-              bgcolor: "white",
-            }}
-          >
-            <Avatar
-              sx={{
-                width: 120,
-                height: 120,
-                mx: "auto",
-                mb: 2,
-                bgcolor: "error.main",
-                fontSize: "3.5rem",
-                boxShadow: 3,
-              }}
-            >
-              {child.name.split(" ").map((n) => n[0]).join("").toUpperCase()}
-            </Avatar>
+          {/* Back bar like student pages */}
+          {(isBehaviourPage || isTimetablePage || isNotebookPage || isNotificationPage) && (
+            <Box px={{ xs: 4, md: 8 }} py={2} sx={{ bgcolor: '#f8fafc' }}>
+              <Button variant="contained" startIcon={<ArrowBackIcon />} onClick={() => navigate('/parent')} sx={{ backgroundColor: '#fff', color: '#c53030' }}>
+                Quay lại
+              </Button>
+            </Box>
+          )}
 
-            <Typography variant="h4" fontWeight={800} color="error.dark" gutterBottom>
-              {child.name}
-            </Typography>
+          {/* Launcher or Behaviour/Timetable/Notebook/Notification page */}
+          {isBehaviourPage ? (
+            <>
+              {/* Nút mở form thêm hành vi */}
+              <Box sx={{ textAlign: "center", mb: 3 }}>
+                <Button
+                  variant="contained"
+                  color="primary"
+                  startIcon={<AddCircleOutlineIcon />}
+                  size="large"
+                  onClick={() => setOpenAddForm(true)}
+                  sx={{ px: 5, py: 1.5 }}
+                >
+                  Thêm hành vi mới
+                </Button>
+              </Box>
 
-            <Divider sx={{ my: 2, width: "50%", mx: "auto" }} />
+              {/* Form thêm hành vi (Dialog) */}
+              <AddBehaviourForm
+                open={openAddForm}
+                onClose={() => setOpenAddForm(false)}
+                student={child}
+                onSuccess={() => {
+                  toast.success("Đã thêm hành vi mới!");
+                  setBehaviourReloadKey((k) => k + 1);
+                  loadChildDetails();
+                }}
+              />
 
-            <Grid container spacing={2} justifyContent="center">
-              <Grid item xs={6}>
-                <Typography variant="subtitle2" color="text.secondary">
-                  Giới tính
+              {/* Bảng lịch sử hành vi (hiện tại) */}
+              <Paper elevation={4} sx={{ p: { xs: 3, md: 5 }, borderRadius: 3 }}>
+                <Typography variant="h5" fontWeight={700} color="error.dark" gutterBottom align="center">
+                  Lịch sử kiểm tra hành vi
                 </Typography>
-                <Typography variant="body1" fontWeight={600}>
-                  {child.gender || "—"}
-                </Typography>
+                <DetailBehaviourTable student={child} refreshKey={behaviourReloadKey} />
+              </Paper>
+            </>
+          ) : isTimetablePage ? (
+            <Paper elevation={0} sx={{ p: 0 }}>
+              <Box px={{ xs: 4, md: 8 }} py={2} sx={{ bgcolor: '#f8fafc' }}>
+                <Stack direction={{ xs: 'column', md: 'row' }} spacing={2} alignItems="center" justifyContent="space-between">
+                  <Box>
+                    <Typography variant="h6" fontWeight={700}>Chọn lớp</Typography>
+                  </Box>
+                  <Box>
+                    <FormControl size="small" sx={{ minWidth: 220 }}>
+                      <InputLabel>Chọn lớp</InputLabel>
+                      <Select value={selectedClassId} label="Chọn lớp" onChange={(e) => setSelectedClassId(e.target.value)}>
+                        {parentClasses.map(c => <MenuItem key={c.id || c.classId} value={c.id || c.classId}>{c.className || c.name}</MenuItem>)}
+                      </Select>
+                    </FormControl>
+                  </Box>
+                </Stack>
+              </Box>
+              <Timetable classId={selectedClassId || child.classId} />
+            </Paper>
+          ) : isNotebookPage ? (
+            <Paper elevation={0} sx={{ p: 0 }}>
+              <Box px={{ xs: 4, md: 8 }} py={2} sx={{ bgcolor: '#f8fafc' }}>
+                <FormControl size="small" sx={{ minWidth: 220 }}>
+                  <InputLabel>Chọn lớp</InputLabel>
+                      <Select value={selectedClassId} label="Chọn lớp" onChange={(e) => setSelectedClassId(e.target.value)}>
+                        {parentClasses.map(c => <MenuItem key={c.id || c.classId} value={c.id || c.classId}>{c.className || c.name}</MenuItem>)}
+                      </Select>
+                </FormControl>
+              </Box>
+              <NotificationsManagement classIdProp={selectedClassId || child.classId} />
+            </Paper>
+          ) : isNotificationPage ? (
+            <Paper elevation={0} sx={{ p: 0 }}>
+              <Box px={{ xs: 2, md: 6 }} py={2} sx={{ bgcolor: '#f8fafc' }}>
+                <Box display="flex" gap={2} flexDirection={{ xs: 'column', md: 'row' }}>
+                  <Box sx={{ width: { xs: '100%', md: 300 } }}>
+                    <FormControl fullWidth size="small">
+                      <InputLabel>Chọn lớp</InputLabel>
+                      <Select value={selectedClassId} label="Chọn lớp" onChange={(e) => setSelectedClassId(e.target.value)}>
+                        {parentClasses.map(c => <MenuItem key={c.id || c.classId} value={c.id || c.classId}>{c.className || c.name}</MenuItem>)}
+                      </Select>
+                    </FormControl>
+                  </Box>
+
+                  <Box sx={{ flex: 1 }}>
+                    <NotificationsManagement classIdProp={selectedClassId || child.classId} />
+                  </Box>
+                </Box>
+              </Box>
+            </Paper>
+          ) : (
+            <Paper elevation={6} sx={{ maxWidth: 900, mx: 'auto', p: 4, borderRadius: 3, textAlign: 'center' }}>
+              <Typography variant="h4" fontWeight={800} gutterBottom>
+                Cổng thông tin Phụ huynh
+              </Typography>
+              <Typography color="text.secondary" sx={{ mb: 3 }}>Chọn mục bạn muốn xem cho con</Typography>
+
+              <Grid container spacing={3} justifyContent="center">
+                <Grid item xs={12} sm={6} md={4} sx={{ display: 'flex' }}>
+                  <Paper onClick={() => navigate('/parent/timetable')} elevation={3} sx={{ p: 3, width: '100%', cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1 }}>
+                    <ScheduleIcon sx={{ fontSize: 48, color: '#1976d2' }} />
+                    <Typography fontWeight={700}>Thời khóa biểu</Typography>
+                  </Paper>
+                </Grid>
+
+                <Grid item xs={12} sm={6} md={4} sx={{ display: 'flex' }}>
+                  <Paper onClick={() => navigate('/parent/notebook')} elevation={3} sx={{ p: 3, width: '100%', cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1 }}>
+                    <MenuBookIcon sx={{ fontSize: 48, color: '#38a169' }} />
+                    <Typography fontWeight={700}>Sổ liên lạc</Typography>
+                  </Paper>
+                </Grid>
+
+                <Grid item xs={12} sm={6} md={4} sx={{ display: 'flex' }}>
+                  <Paper onClick={() => navigate('/parent/behaviour')} elevation={3} sx={{ p: 3, width: '100%', cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1 }}>
+                    <GavelIcon sx={{ fontSize: 48, color: '#e53e3e' }} />
+                    <Typography fontWeight={700}>Hành vi</Typography>
+                  </Paper>
+                </Grid>
+                
+                <Grid item xs={12} sm={6} md={4} sx={{ display: 'flex' }}>
+                  <Paper onClick={() => navigate('/parent/notification')} elevation={3} sx={{ p: 3, width: '100%', cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1 }}>
+                    <NotificationsIcon sx={{ fontSize: 48, color: '#8e44ad' }} />
+                    <Typography fontWeight={700}>Thông báo</Typography>
+                  </Paper>
+                </Grid>
               </Grid>
-              <Grid item xs={6}>
-                <Typography variant="subtitle2" color="text.secondary">
-                  Ngày sinh
-                </Typography>
-                <Typography variant="body1" fontWeight={600}>
-                  {child.dateOfBirth || "—"}
-                </Typography>
-              </Grid>
-            </Grid>
-          </Paper>
-
-          {/* Nút mở form thêm hành vi */}
-          <Box sx={{ textAlign: "center", mb: 5 }}>
-            <Button
-              variant="contained"
-              color="primary"
-              startIcon={<AddCircleOutlineIcon />}
-              size="large"
-              onClick={() => setOpenAddForm(true)}
-              sx={{ px: 5, py: 1.5 }}
-            >
-              Thêm hành vi mới
-            </Button>
-          </Box>
-
-          {/* Form thêm hành vi (Dialog) */}
-          <AddBehaviourForm
-            open={openAddForm}
-            onClose={() => setOpenAddForm(false)}
-            student={child} // Truyền student vào dialog
-            onSuccess={() => {
-              toast.success("Đã thêm hành vi mới!");
-              setBehaviourReloadKey((k) => k + 1);
-              loadChildDetails();
-            }}
-          />
-
-          {/* Bảng lịch sử hành vi */}
-          <Paper elevation={4} sx={{ p: { xs: 3, md: 5 }, borderRadius: 3 }}>
-            <Typography variant="h5" fontWeight={700} color="error.dark" gutterBottom align="center">
-              Lịch sử kiểm tra hành vi
-            </Typography>
-            <DetailBehaviourTable student={child} refreshKey={behaviourReloadKey} />
-          </Paper>
+            </Paper>
+          )}
         </motion.div>
       </Container>
     </Box>
